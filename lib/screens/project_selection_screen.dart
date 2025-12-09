@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../models/project.dart';
 import '../services/storage_service.dart';
 import '../services/settings_service.dart';
@@ -27,11 +28,27 @@ class _ProjectSelectionScreenState extends State<ProjectSelectionScreen> {
   List<Project> _recentProjects = [];
   bool _isLoading = true;
   final _uuid = const Uuid();
+  String _appVersion = '1.0.0';
 
   @override
   void initState() {
     super.initState();
     _loadRecentProjects();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      setState(() {
+        _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+      });
+    } catch (e) {
+      // Fallback to default version if package info fails
+      setState(() {
+        _appVersion = '1.0.0';
+      });
+    }
   }
 
   Future<void> _loadRecentProjects() async {
@@ -163,7 +180,7 @@ class _ProjectSelectionScreenState extends State<ProjectSelectionScreen> {
 
                       // Footer
                       Text(
-                        '${loc.version} 1.0.0',
+                        '${loc.version} $_appVersion',
                         style: const TextStyle(color: Colors.white38, fontSize: 12),
                       ),
                     ],
@@ -525,7 +542,7 @@ class _ProjectSelectionScreenState extends State<ProjectSelectionScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Version 1.0.0'),
+            Text('Version $_appVersion'),
             const SizedBox(height: 16),
             const Text('UI Automation Made Simple'),
             const SizedBox(height: 16),
