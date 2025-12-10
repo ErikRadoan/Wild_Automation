@@ -54,6 +54,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
                 painter: GearPainter(
                   color: const Color(0xFF56585C),
                   teethCount: 12,
+                  toothHeight: 12, // Bigger teeth
                 ),
               ),
             ),
@@ -116,7 +117,7 @@ class _LoadingScreenState extends State<LoadingScreen> with SingleTickerProvider
   }
 }
 
-/// Custom painter for drawing a gear shape
+/// Custom painter for drawing an industrial gear shape
 class GearPainter extends CustomPainter {
   final Color color;
   final int teethCount;
@@ -142,78 +143,106 @@ class GearPainter extends CustomPainter {
 
     final path = Path();
 
-    // Draw gear teeth
+    // Draw industrial gear teeth (rectangular and chunky)
     for (int i = 0; i < teethCount; i++) {
       final angle = (i * 2 * math.pi) / teethCount;
       final nextAngle = ((i + 1) * 2 * math.pi) / teethCount;
 
-      // Tooth base (inner)
-      final toothBaseStart = Offset(
-        center.dx + radius * math.cos(angle),
-        center.dy + radius * math.sin(angle),
+      // Tooth width (65% for bigger industrial look)
+      final toothAngleWidth = (2 * math.pi) / teethCount * 0.65;
+
+      // Inner arc points
+      final innerStart = Offset(
+        center.dx + radius * math.cos(angle + toothAngleWidth * 0.15),
+        center.dy + radius * math.sin(angle + toothAngleWidth * 0.15),
+      );
+      final innerEnd = Offset(
+        center.dx + radius * math.cos(angle + toothAngleWidth * 0.85),
+        center.dy + radius * math.sin(angle + toothAngleWidth * 0.85),
       );
 
-      // Tooth top (outer) - narrower than base
-      final toothAngleWidth = (2 * math.pi) / teethCount * 0.4;
-      final toothTopStart = Offset(
-        center.dx + outerRadius * math.cos(angle + toothAngleWidth * 0.3),
-        center.dy + outerRadius * math.sin(angle + toothAngleWidth * 0.3),
+      // Outer arc points (rectangular tooth profile)
+      final outerStart = Offset(
+        center.dx + outerRadius * math.cos(angle + toothAngleWidth * 0.2),
+        center.dy + outerRadius * math.sin(angle + toothAngleWidth * 0.2),
       );
-      final toothTopEnd = Offset(
-        center.dx + outerRadius * math.cos(angle + toothAngleWidth * 0.7),
-        center.dy + outerRadius * math.sin(angle + toothAngleWidth * 0.7),
+      final outerEnd = Offset(
+        center.dx + outerRadius * math.cos(angle + toothAngleWidth * 0.8),
+        center.dy + outerRadius * math.sin(angle + toothAngleWidth * 0.8),
       );
 
-      // Tooth base end
-      final toothBaseEnd = Offset(
-        center.dx + radius * math.cos(nextAngle),
-        center.dy + radius * math.sin(nextAngle),
+      // Gap between teeth
+      final gapStart = Offset(
+        center.dx + radius * math.cos(angle + toothAngleWidth * 0.85),
+        center.dy + radius * math.sin(angle + toothAngleWidth * 0.85),
+      );
+      final gapEnd = Offset(
+        center.dx + radius * math.cos(nextAngle + toothAngleWidth * 0.15),
+        center.dy + radius * math.sin(nextAngle + toothAngleWidth * 0.15),
       );
 
       if (i == 0) {
-        path.moveTo(toothBaseStart.dx, toothBaseStart.dy);
-      } else {
-        path.lineTo(toothBaseStart.dx, toothBaseStart.dy);
+        path.moveTo(innerStart.dx, innerStart.dy);
       }
 
-      path.lineTo(toothTopStart.dx, toothTopStart.dy);
-      path.lineTo(toothTopEnd.dx, toothTopEnd.dy);
-      path.lineTo(toothBaseEnd.dx, toothBaseEnd.dy);
+      // Draw tooth
+      path.lineTo(outerStart.dx, outerStart.dy);
+      path.lineTo(outerEnd.dx, outerEnd.dy);
+      path.lineTo(innerEnd.dx, innerEnd.dy);
+
+      // Arc to next tooth
+      path.arcToPoint(
+        gapEnd,
+        radius: Radius.circular(radius),
+      );
     }
 
     path.close();
     canvas.drawPath(path, paint);
 
-    // Draw center hole
+    // Draw outer rim for depth
+    final rimPaint = Paint()
+      ..color = color.withOpacity(0.8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+    canvas.drawCircle(center, radius - 2, rimPaint);
+
+    // Draw center hole with depth
     final holePaint = Paint()
       ..color = const Color(0xFF1E1E1E)
       ..style = PaintingStyle.fill;
-
     canvas.drawCircle(center, holeRadius, holePaint);
 
-    // Draw center hole border
+    // Draw center hole border (thicker for industrial look)
     final holeBorderPaint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-
+      ..strokeWidth = 4;
     canvas.drawCircle(center, holeRadius, holeBorderPaint);
 
-    // Draw some spokes for detail
+    // Draw inner ring for detail
+    final innerRingPaint = Paint()
+      ..color = color.withOpacity(0.6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(center, holeRadius + 6, innerRingPaint);
+
+    // Draw 6 spokes for industrial detail
     final spokePaint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
 
-    for (int i = 0; i < 4; i++) {
-      final angle = (i * math.pi) / 2;
+    for (int i = 0; i < 6; i++) {
+      final angle = (i * math.pi) / 3;
       final start = Offset(
-        center.dx + holeRadius * math.cos(angle),
-        center.dy + holeRadius * math.sin(angle),
+        center.dx + (holeRadius + 6) * math.cos(angle),
+        center.dy + (holeRadius + 6) * math.sin(angle),
       );
       final end = Offset(
-        center.dx + (radius - 4) * math.cos(angle),
-        center.dy + (radius - 4) * math.sin(angle),
+        center.dx + (radius - 6) * math.cos(angle),
+        center.dy + (radius - 6) * math.sin(angle),
       );
       canvas.drawLine(start, end, spokePaint);
     }

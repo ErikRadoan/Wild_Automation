@@ -60,16 +60,33 @@ class WildAutomationAppLoader extends StatefulWidget {
   State<WildAutomationAppLoader> createState() => _WildAutomationAppLoaderState();
 }
 
-class _WildAutomationAppLoaderState extends State<WildAutomationAppLoader> {
+class _WildAutomationAppLoaderState extends State<WildAutomationAppLoader> with SingleTickerProviderStateMixin {
   StorageService? _storage;
   SettingsService? _settings;
   bool _isLoading = true;
   String _loadingMessage = 'Initializing...';
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeInOut,
+    );
+    _fadeController.value = 1.0; // Start fully visible
     _initializeApp();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeApp() async {
@@ -96,7 +113,13 @@ class _WildAutomationAppLoaderState extends State<WildAutomationAppLoader> {
       // Small delay to show "Ready!" message
       await Future.delayed(const Duration(milliseconds: 500));
 
+      // Fade out loading screen
+      await _fadeController.reverse();
+
       setState(() => _isLoading = false);
+
+      // Fade in main app
+      _fadeController.forward();
     } catch (e) {
       debugPrint('Error initializing app: $e');
       setState(() => _loadingMessage = 'Error: $e');
@@ -105,16 +128,27 @@ class _WildAutomationAppLoaderState extends State<WildAutomationAppLoader> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading || _storage == null || _settings == null) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: LoadingScreen(message: _loadingMessage),
-      );
-    }
-
-    return WildAutomationApp(
-      storage: _storage!,
-      settings: _settings!,
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 800),
+      switchInCurve: Curves.easeInOut,
+      switchOutCurve: Curves.easeInOut,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: child,
+        );
+      },
+      child: (_isLoading || _storage == null || _settings == null)
+          ? MaterialApp(
+              key: const ValueKey('loading'),
+              debugShowCheckedModeBanner: false,
+              home: LoadingScreen(message: _loadingMessage),
+            )
+          : WildAutomationApp(
+              key: const ValueKey('main'),
+              storage: _storage!,
+              settings: _settings!,
+            ),
     );
   }
 }
