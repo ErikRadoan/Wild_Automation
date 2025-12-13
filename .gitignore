@@ -33,6 +33,9 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Release artifacts
+/releases/
+
 # Symbolication related
 app.*.symbols
 
@@ -45,5 +48,4 @@ app.*.map.json
 /android/app/release
 
 # Release / automation scripts (local only)
-push.ps1
-push_and_build.ps1
+*.ps1
