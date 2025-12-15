@@ -27,6 +27,7 @@ void main(List<String> args) async {
   // Initialize window manager
   await windowManager.ensureInitialized();
 
+
   const windowOptions = WindowOptions(
     size: Size(1400, 900),
     minimumSize: Size(1000, 700),

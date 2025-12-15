@@ -126,9 +126,13 @@ Found a bug? [Open an issue](https://github.com/ErikRadoan/Wild_Automation/issue
 
 ## 📄 License
 
-Copyright © 2024-2025 WILD Group. All rights reserved.
+This repository does not represent the views, work, or intellectual property
+of the author's current or past employers.
 
-This software is proprietary. See [LICENSE](LICENSE) for details.
+The employer has **no involvement** in the design, development, testing,
+deployment, or maintenance of this project.
+
+See [LICENSE](LICENSE) for details.
 
 ---
 

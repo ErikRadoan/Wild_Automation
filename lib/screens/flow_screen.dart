@@ -96,6 +96,16 @@ class _FlowScreenState extends State<FlowScreen> {
             ),
           ),
           IconButton(
+            icon: const Icon(Icons.file_upload),
+            onPressed: _importFlow,
+            tooltip: 'Import Flow',
+          ),
+          IconButton(
+            icon: const Icon(Icons.file_download),
+            onPressed: _exportCurrentFlow,
+            tooltip: 'Export Flow',
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
             onPressed: _showCreateFlowDialog,
             tooltip: 'New Flow',
@@ -263,6 +273,58 @@ class _FlowScreenState extends State<FlowScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _importFlow() async {
+    final provider = context.read<FlowProvider>();
+    final flow = await provider.importFlow();
+
+    if (mounted) {
+      if (flow != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Flow "${flow.name}" imported successfully')),
+        );
+        provider.selectFlow(flow.id);
+      } else if (provider.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(provider.error!),
+            backgroundColor: Colors.red,
+          ),
+        );
+        provider.clearError();
+      }
+    }
+  }
+
+  Future<void> _exportCurrentFlow() async {
+    final provider = context.read<FlowProvider>();
+    final currentFlow = provider.currentFlow;
+
+    if (currentFlow == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No flow selected to export')),
+      );
+      return;
+    }
+
+    final success = await provider.exportFlow(currentFlow);
+
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Flow "${currentFlow.name}" exported successfully')),
+        );
+      } else if (provider.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(provider.error!),
+            backgroundColor: Colors.red,
+          ),
+        );
+        provider.clearError();
+      }
+    }
   }
 }
 

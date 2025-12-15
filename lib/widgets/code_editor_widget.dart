@@ -129,7 +129,7 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
     final yOffset = lines * lineHeight;
 
     return Positioned(
-      width: 450,
+      width: 480,
       child: CompositedTransformFollower(
         link: _layerLink,
         showWhenUnlinked: false,
@@ -137,58 +137,101 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
         followerAnchor: Alignment.topLeft,
         offset: Offset(0, yOffset),
         child: Material(
-          elevation: 8,
+          elevation: 12,
           borderRadius: BorderRadius.circular(8),
-          color: const Color(0xFF2D2D30),
+          color: const Color(0xFF252526),
+          shadowColor: Colors.black.withValues(alpha: 0.5),
           child: Container(
-            constraints: const BoxConstraints(maxHeight: 300),
+            constraints: const BoxConstraints(maxHeight: 350),
             decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFF56585C)),
+              border: Border.all(
+                color: const Color(0xFF56585C),
+                width: 1.5,
+              ),
               borderRadius: BorderRadius.circular(8),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF2D2D30),
+                  Color(0xFF252526),
+                ],
+              ),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header
+                // Header with gradient
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF1E1E1E),
-                    border: Border(bottom: BorderSide(color: Color(0xFF56585C))),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1E1E1E), Color(0xFF252526)],
+                    ),
+                    border: const Border(
+                      bottom: BorderSide(color: Color(0xFF56585C), width: 1),
+                    ),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.lightbulb, color: Colors.amber, size: 16),
-                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Icon(
+                          Icons.auto_awesome,
+                          color: Colors.amber,
+                          size: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          '${_suggestions.length} suggestion${_suggestions.length == 1 ? '' : 's'}',
+                          '${_suggestions.length} suggestion${_suggestions.length == 1 ? '' : 's'} for "$_currentWord"',
                           style: const TextStyle(
-                            color: Colors.white70,
+                            color: Colors.white,
                             fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      Text(
-                        '↑↓ Navigate  ↵ Accept  Esc Close',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 10,
-                          fontFamily: 'monospace',
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3E3E42),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFF56585C)),
+                        ),
+                        child: Text(
+                          '↑↓  Tab  Esc',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 10,
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                // Suggestions list
+                // Suggestions list with improved styling
                 Flexible(
-                  child: ListView.builder(
+                  child: ListView.separated(
                     shrinkWrap: true,
-                    padding: EdgeInsets.zero,
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     itemCount: _suggestions.length,
+                    separatorBuilder: (ctx, index) => Divider(
+                      height: 1,
+                      thickness: 0.5,
+                      color: Colors.grey[800],
+                      indent: 12,
+                      endIndent: 12,
+                    ),
                     itemBuilder: (ctx, index) {
                       final item = _suggestions[index];
                       final isSelected = index == _selectedIndex;
@@ -197,24 +240,44 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                         onTap: () => _insertSuggestion(item),
                         onHover: (hovering) {
                           if (hovering && _selectedIndex != index) {
-                            _selectedIndex = index;
+                            setState(() => _selectedIndex = index);
                             _rebuildAutocomplete();
                           }
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          color: isSelected
-                              ? const Color(0xFF3E3E42)
-                              : Colors.transparent,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFF56585C).withValues(alpha: 0.4)
+                                : Colors.transparent,
+                            border: isSelected
+                                ? Border(
+                                    left: BorderSide(
+                                      color: _getColor(item.category),
+                                      width: 3,
+                                    ),
+                                  )
+                                : null,
+                          ),
                           child: Row(
                             children: [
-                              // Icon
-                              Icon(
-                                _getIcon(item.category),
-                                size: 18,
-                                color: _getColor(item.category),
+                              // Icon with background
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: _getColor(item.category).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: _getColor(item.category).withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Icon(
+                                  _getIcon(item.category),
+                                  size: 16,
+                                  color: _getColor(item.category),
+                                ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 12),
                               // Content
                               Expanded(
                                 child: Column(
@@ -223,21 +286,21 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                                     // Name with highlight
                                     RichText(
                                       text: TextSpan(
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontFamily: 'monospace',
                                           fontSize: 13,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w500,
+                                          color: isSelected ? Colors.white : Colors.white70,
+                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                                         ),
                                         children: _buildHighlightedText(item.name, _currentWord),
                                       ),
                                     ),
                                     // Signature
-                                    const SizedBox(height: 2),
+                                    const SizedBox(height: 3),
                                     Text(
                                       item.signature,
                                       style: TextStyle(
-                                        color: Colors.grey[400],
+                                        color: isSelected ? Colors.grey[300] : Colors.grey[500],
                                         fontSize: 11,
                                         fontFamily: 'monospace',
                                       ),
@@ -247,15 +310,15 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 10),
                               // Category badge
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: _getColor(item.category).withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color: _getColor(item.category).withValues(alpha: 0.5),
+                                    color: _getColor(item.category).withValues(alpha: 0.4),
                                   ),
                                 ),
                                 child: Text(
@@ -264,6 +327,7 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                                     color: _getColor(item.category),
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
                                   ),
                                 ),
                               ),
@@ -417,28 +481,68 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                 onTap: () {
                   _focusNode.requestFocus();
                 },
-                child: Focus(
-                  focusNode: _focusNode,
+                child: FocusScope(
                   onKeyEvent: (node, event) {
-                    _handleKeyEvent(event);
-                    // Let the CodeField handle typing
+                    if (event is KeyDownEvent && _autocompleteOverlay != null && _suggestions.isNotEmpty) {
+                      // Handle Tab
+                      if (event.logicalKey == LogicalKeyboardKey.tab) {
+                        _insertSuggestion(_suggestions[_selectedIndex]);
+                        return KeyEventResult.handled;
+                      }
+                      // Handle Arrow Up
+                      else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        _selectedIndex = (_selectedIndex - 1 + _suggestions.length) % _suggestions.length;
+                        _rebuildAutocomplete();
+                        return KeyEventResult.handled;
+                      }
+                      // Handle Arrow Down
+                      else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        _selectedIndex = (_selectedIndex + 1) % _suggestions.length;
+                        _rebuildAutocomplete();
+                        return KeyEventResult.handled;
+                      }
+                      // Handle Enter
+                      else if (event.logicalKey == LogicalKeyboardKey.enter) {
+                        _insertSuggestion(_suggestions[_selectedIndex]);
+                        return KeyEventResult.handled;
+                      }
+                      // Handle Escape
+                      else if (event.logicalKey == LogicalKeyboardKey.escape) {
+                        _hideAutocomplete();
+                        return KeyEventResult.handled;
+                      }
+                    }
                     return KeyEventResult.ignored;
                   },
-                  child: CompositedTransformTarget(
-                    link: _layerLink,
-                    child: CodeTheme(
-                      data: CodeThemeData(styles: monokaiSublimeTheme),
-                      child: Container(
-                        color: const Color(0xFF272822), // Monokai background color
-                        width: double.infinity,
-                        height: double.infinity,
-                        child: SingleChildScrollView(
-                          child: CodeField(
-                            controller: _controller,
-                            textStyle: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 14,
-                              height: 1.5,
+                  child: Focus(
+                    focusNode: _focusNode,
+                    child: CompositedTransformTarget(
+                      link: _layerLink,
+                      child: CodeTheme(
+                        data: CodeThemeData(styles: monokaiSublimeTheme),
+                        child: Container(
+                          color: const Color(0xFF272822),
+                          width: double.infinity,
+                          height: double.infinity,
+                          padding: EdgeInsets.zero,
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.zero,
+                            child: CodeField(
+                              controller: _controller,
+                              textStyle: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 14,
+                                height: 1.5,
+                              ),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF272822),
+                              ),
+                              padding: EdgeInsets.zero,
+                              lineNumberStyle: const LineNumberStyle(
+                                width: 50,
+                                textAlign: TextAlign.right,
+                                margin: 8,
+                              ),
                             ),
                           ),
                         ),
@@ -455,60 +559,226 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
     );
   }
 
-  void _handleKeyEvent(KeyEvent event) {
-    if (event is! KeyDownEvent) return;
-
-    // Handle autocomplete navigation
-    if (_autocompleteOverlay != null && _suggestions.isNotEmpty) {
-      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        _selectedIndex = (_selectedIndex + 1) % _suggestions.length;
-        _rebuildAutocomplete();
-        return;
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        _selectedIndex = (_selectedIndex - 1 + _suggestions.length) % _suggestions.length;
-        _rebuildAutocomplete();
-        return;
-      } else if (event.logicalKey == LogicalKeyboardKey.enter) {
-        _insertSuggestion(_suggestions[_selectedIndex]);
-        return;
-      } else if (event.logicalKey == LogicalKeyboardKey.tab) {
-        _insertSuggestion(_suggestions[_selectedIndex]);
-        return;
-      } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-        _hideAutocomplete();
-        return;
-      }
-    }
-
-    // Ctrl+Space to manually show
-    if (event.logicalKey == LogicalKeyboardKey.space &&
-        HardwareKeyboard.instance.isControlPressed) {
-      _updateAutocomplete();
-    }
-  }
 
   Widget _buildToolbar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: const BoxDecoration(
-        color: Color(0xFF2D2D30),
-        border: Border(bottom: BorderSide(color: Color(0xFF56585C))),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(_showApiReference ? Icons.visibility_off : Icons.menu_book, size: 18),
-            onPressed: () => setState(() => _showApiReference = !_showApiReference),
-            tooltip: 'API Reference',
-            color: Colors.white70,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF),
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0xFF3E3E42) : const Color(0xFFE0E0E0),
+            width: 1,
           ),
-          const Spacer(),
-          Text(
-            'Type to autocomplete • Ctrl+Space',
-            style: TextStyle(color: Colors.grey[600], fontSize: 10),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            offset: const Offset(0, 1),
+            blurRadius: 3,
           ),
         ],
       ),
+      child: Row(
+        children: [
+          // Editor title with icon
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF56585C).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(
+                  Icons.code,
+                  size: 20,
+                  color: Color(0xFF56585C),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Python Flow Editor',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    'Start typing to see suggestions',
+                    style: TextStyle(
+                      color: isDark ? Colors.grey[500] : Colors.grey[600],
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const Spacer(),
+          // Keyboard shortcuts hint
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF2D2D30) : const Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isDark ? const Color(0xFF3E3E42) : const Color(0xFFE0E0E0),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildKeyHint('Ctrl', 'Space', 'Show suggestions'),
+                const SizedBox(width: 16),
+                _buildKeyHint('Tab', null, 'Accept suggestion'),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // API Reference toggle button
+          Material(
+            color: _showApiReference
+                ? const Color(0xFF56585C)
+                : (isDark ? const Color(0xFF2D2D30) : const Color(0xFFF5F5F5)),
+            borderRadius: BorderRadius.circular(6),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(6),
+              onTap: () => setState(() => _showApiReference = !_showApiReference),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: _showApiReference
+                        ? const Color(0xFF56585C)
+                        : (isDark ? const Color(0xFF3E3E42) : const Color(0xFFE0E0E0)),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.menu_book,
+                      size: 18,
+                      color: _showApiReference
+                          ? Colors.white
+                          : (isDark ? Colors.grey[400] : Colors.grey[700]),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'API Reference',
+                      style: TextStyle(
+                        color: _showApiReference
+                            ? Colors.white
+                            : (isDark ? Colors.grey[300] : Colors.grey[800]),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (_showApiReference) ...[
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKeyHint(String key1, String? key2, String description) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF3E3E42) : Colors.white,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: isDark ? const Color(0xFF56585C) : const Color(0xFFD0D0D0),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                offset: const Offset(0, 1),
+                blurRadius: 1,
+              ),
+            ],
+          ),
+          child: Text(
+            key1,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.grey[300] : Colors.grey[800],
+            ),
+          ),
+        ),
+        if (key2 != null) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: Text(
+              '+',
+              style: TextStyle(
+                fontSize: 10,
+                color: isDark ? Colors.grey[500] : Colors.grey[600],
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF3E3E42) : Colors.white,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: isDark ? const Color(0xFF56585C) : const Color(0xFFD0D0D0),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  offset: const Offset(0, 1),
+                  blurRadius: 1,
+                ),
+              ],
+            ),
+            child: Text(
+              key2,
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.grey[300] : Colors.grey[800],
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(width: 6),
+        Text(
+          description,
+          style: TextStyle(
+            fontSize: 11,
+            color: isDark ? Colors.grey[500] : Colors.grey[600],
+          ),
+        ),
+      ],
     );
   }
 
@@ -520,48 +790,73 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
     }
 
     return Container(
-      height: 250,
+      height: 280,
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D30),
-        border: Border(top: BorderSide(color: Colors.grey[800]!)),
+        color: const Color(0xFF1E1E1E),
+        border: const Border(top: BorderSide(color: Color(0xFF56585C), width: 2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            offset: const Offset(0, -2),
+            blurRadius: 8,
+          ),
+        ],
       ),
       child: DefaultTabController(
         length: categories.length,
         child: Column(
           children: [
-            TabBar(
-              isScrollable: true,
-              indicatorColor: Colors.blue,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.grey[500],
-              tabs: categories.keys.map((cat) => Tab(text: cat)).toList(),
+            Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFF252526),
+                border: Border(bottom: BorderSide(color: Color(0xFF56585C))),
+              ),
+              child: TabBar(
+                isScrollable: true,
+                indicatorColor: const Color(0xFF56585C),
+                indicatorWeight: 3,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.grey[500],
+                labelStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+                tabs: categories.keys.map((cat) {
+                  return Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(_getIcon(cat), size: 16),
+                        const SizedBox(width: 6),
+                        Text(cat),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
             Expanded(
               child: TabBarView(
                 children: categories.entries.map((entry) {
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(8),
+                  return ListView.separated(
+                    padding: const EdgeInsets.all(12),
                     itemCount: entry.value.length,
+                    separatorBuilder: (ctx, i) => const SizedBox(height: 4),
                     itemBuilder: (ctx, i) {
                       final item = entry.value[i];
-                      return Card(
-                        color: const Color(0xFF1E1E1E),
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          dense: true,
-                          leading: Icon(_getIcon(item.category), size: 16, color: _getColor(item.category)),
-                          title: Text(
-                            item.name,
-                            style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Colors.white),
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2D2D30),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: _getColor(item.category).withValues(alpha: 0.2),
                           ),
-                          subtitle: Text(
-                            item.signature,
-                            style: TextStyle(fontSize: 10, color: Colors.grey[400]),
-                          ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.add, size: 16),
-                            color: Colors.blue,
-                            onPressed: () {
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(6),
+                            onTap: () {
                               final cursor = _controller.selection.baseOffset;
                               final text = _controller.text;
                               final newText = text.substring(0, cursor) + item.name + text.substring(cursor);
@@ -569,6 +864,78 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                               _controller.selection = TextSelection.collapsed(offset: cursor + item.name.length);
                               _focusNode.requestFocus();
                             },
+                            child: Padding(
+                              padding: const EdgeInsets.all(10),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: _getColor(item.category).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Icon(
+                                      _getIcon(item.category),
+                                      size: 16,
+                                      color: _getColor(item.category),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.name,
+                                          style: const TextStyle(
+                                            fontFamily: 'monospace',
+                                            fontSize: 13,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          item.signature,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey[400],
+                                            fontFamily: 'monospace',
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (item.description.isNotEmpty) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            item.description,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.grey[500],
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Icon(
+                                      Icons.add,
+                                      size: 14,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       );
@@ -617,6 +984,7 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
     super.dispose();
   }
 }
+
 
 class ApiItem {
   final String name;

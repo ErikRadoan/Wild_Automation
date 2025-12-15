@@ -1,14 +1,17 @@
-﻿import 'package:flutter/foundation.dart';
+﻿import 'dart:io';
+import 'package:flutter/foundation.dart';
 import '../models/execution_result.dart';
 import '../models/flow_variable.dart';
 import '../models/screen_object.dart';
 import '../services/python_execution_service.dart';
+import '../services/taskbar_service.dart';
 import 'package:uuid/uuid.dart';
 
 /// Provider for managing flow execution
 class ExecutionProvider extends ChangeNotifier {
   final PythonExecutionService _executionService;
   final _uuid = const Uuid();
+  final _taskbarService = TaskbarService();
 
   ExecutionResult? _currentExecution;
   List<ExecutionResult> _executionHistory = [];
@@ -104,6 +107,9 @@ class ExecutionProvider extends ChangeNotifier {
     );
     notifyListeners();
 
+    // Show green badge on taskbar to indicate running
+    await _taskbarService.showRunningBadge();
+
     try {
       final result = await _executionService.executeFlow(
         executionId: executionId,
@@ -126,6 +132,13 @@ class ExecutionProvider extends ChangeNotifier {
       if (_executionHistory.length > 50) {
         _executionHistory = _executionHistory.sublist(0, 50);
       }
+
+      // Send success notification
+      await _sendNotification(
+        title: 'Flow Complete',
+        body: 'Flow execution finished successfully',
+        isSuccess: true,
+      );
     } catch (e) {
       _error = e.toString();
 
@@ -151,9 +164,70 @@ class ExecutionProvider extends ChangeNotifier {
         }
         debugPrint('═══════════════════════════════════════════\n');
       }
+
+      // Send error notification
+      await _sendNotification(
+        title: 'Flow Failed',
+        body: 'Flow execution failed: ${e.toString()}',
+        isSuccess: false,
+      );
     } finally {
       _isExecuting = false;
+
+      // Remove green badge from taskbar
+      await _taskbarService.hideRunningBadge();
+
       notifyListeners();
+    }
+  }
+
+  Future<void> _sendNotification({
+    required String title,
+    required String body,
+    required bool isSuccess,
+  }) async {
+    try {
+      if (Platform.isWindows) {
+        // Use PowerShell to show Windows Toast Notification
+        final result = await Process.run('powershell', [
+          '-WindowStyle', 'Hidden',
+          '-Command',
+          '''
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
+
+\$APP_ID = "WILD.Automate"
+\$template = @"
+<toast>
+    <visual>
+        <binding template="ToastGeneric">
+            <text><![CDATA[$title]]></text>
+            <text><![CDATA[$body]]></text>
+            <image placement="appLogoOverride" hint-crop="circle" src="file:///\$env:APPDATA/WILD_Automate/icon.png"/>
+        </binding>
+    </visual>
+    <audio src="ms-winsoundevent:Notification.Default" />
+</toast>
+"@
+
+\$xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+\$xml.LoadXml(\$template)
+\$toast = [Windows.UI.Notifications.ToastNotification]::new(\$xml)
+\$toast.Tag = "wildAutomate"
+\$toast.Group = "flowExecution"
+\$notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier(\$APP_ID)
+\$notifier.Show(\$toast)
+          '''
+        ]);
+
+        if (result.exitCode == 0) {
+          debugPrint('✓ Notification sent: $title - $body');
+        } else {
+          debugPrint('⚠ Notification warning: ${result.stderr}');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error sending notification: $e');
     }
   }
 

@@ -78,5 +78,31 @@ class Flow extends Equatable {
 
   @override
   String toString() => 'Flow(name: $name, lines: ${pythonCode.split('\n').length})';
+
+  /// Convert to JSON for export
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'pythonCode': pythonCode,
+      'description': description,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'tags': tags,
+    };
+  }
+
+  /// Create from JSON for import
+  factory Flow.fromJson(Map<String, dynamic> json) {
+    return Flow(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      pythonCode: json['pythonCode'] as String,
+      description: json['description'] as String?,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
+    );
+  }
 }
 
