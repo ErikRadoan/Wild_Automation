@@ -17,8 +17,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   PythonCheckResult? _pythonStatus;
   Map<String, PackageStatus>? _packageStatuses;
+  bool _venvExists = false;
   bool _isChecking = true;
   bool _isInstalling = false;
+  bool _isCreatingVenv = false;
   final List<String> _installLogs = [];
 
   @override
@@ -41,8 +43,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       setState(() => _pythonStatus = pythonStatus);
 
+      // Check if virtual environment exists
+      final venvExists = await _depService.checkVirtualEnvironment();
+      if (!mounted) return;
+      setState(() => _venvExists = venvExists);
+
       if (pythonStatus.isInstalled) {
-        // Check packages
+        // Check packages (will use venv if it exists)
         final packageStatuses = await _depService.checkPackages(pythonStatus.command!);
         if (!mounted) return;
         setState(() => _packageStatuses = packageStatuses);
@@ -58,6 +65,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _createVirtualEnvironment() async {
+    if (_pythonStatus == null || !_pythonStatus!.isInstalled) {
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isCreatingVenv = true;
+      _installLogs.clear();
+      _installLogs.add('Creating virtual environment at short path to avoid Windows MAX_PATH issues...');
+    });
+
+    try {
+      final result = await _depService.createVirtualEnvironment(
+        _pythonStatus!.command!,
+        (log) {
+          if (!mounted) return;
+          setState(() {
+            _installLogs.add(log);
+          });
+        },
+      );
+
+      if (result.success) {
+        if (!mounted) return;
+        setState(() {
+          _installLogs.add('\n✓ Virtual environment created successfully!');
+          _installLogs.add('All packages will be installed to: ${PythonDependencyService.venvPath}');
+        });
+
+        // Recheck dependencies
+        await Future.delayed(const Duration(seconds: 1));
+        await _checkDependencies();
+      } else {
+        if (!mounted) return;
+        setState(() {
+          _installLogs.add('\n✗ Failed to create virtual environment: ${result.error}');
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _installLogs.add('\n✗ Error creating virtual environment: $e');
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() => _isCreatingVenv = false);
+    }
+  }
+
   Future<void> _installMissingPackages() async {
     if (_pythonStatus == null || !_pythonStatus!.isInstalled || _packageStatuses == null) {
       return;
@@ -70,6 +127,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
 
     try {
+      // Create virtual environment first if it doesn't exist
+      if (!_venvExists) {
+        setState(() {
+          _installLogs.add('Creating virtual environment first to avoid long path issues...');
+        });
+
+        await _createVirtualEnvironment();
+
+        if (!_venvExists) {
+          setState(() {
+            _installLogs.add('✗ Cannot install packages without virtual environment');
+          });
+          return;
+        }
+      }
+
+      setState(() {
+        _installLogs.add('\nInstalling packages to virtual environment...');
+        _installLogs.add('Using isolated Python environment: ${PythonDependencyService.venvPath}');
+      });
+
       final results = await _depService.installMissingPackages(
         _pythonStatus!.command!,
         _packageStatuses!,
@@ -307,45 +385,137 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildPythonStatus(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: _pythonStatus?.isInstalled ?? false ? Colors.green : Colors.red,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _pythonStatus?.isInstalled ?? false ? Icons.check_circle : Icons.error,
-            color: _pythonStatus?.isInstalled ?? false ? Colors.green : Colors.red,
-            size: 32,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Python Installation',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _pythonStatus?.isInstalled ?? false
-                      ? _pythonStatus!.version!
-                      : 'Python not found. Please install Python 3.7 or higher.',
-                  style: TextStyle(
-                    color: _pythonStatus?.isInstalled ?? false
-                        ? (isDark ? Colors.white70 : Colors.grey[700])
-                        : Colors.red,
-                  ),
-                ),
-              ],
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: _pythonStatus?.isInstalled ?? false ? Colors.green : Colors.red,
             ),
           ),
-        ],
-      ),
+          child: Row(
+            children: [
+              Icon(
+                _pythonStatus?.isInstalled ?? false ? Icons.check_circle : Icons.error,
+                color: _pythonStatus?.isInstalled ?? false ? Colors.green : Colors.red,
+                size: 32,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Python Installation',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _pythonStatus?.isInstalled ?? false
+                          ? _pythonStatus!.version!
+                          : 'Python not found. Please install Python 3.7 or higher.',
+                      style: TextStyle(
+                        color: _pythonStatus?.isInstalled ?? false
+                            ? (isDark ? Colors.white70 : Colors.grey[700])
+                            : Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Virtual Environment Status
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _venvExists
+                ? Colors.green.withValues(alpha: 0.1)
+                : Colors.orange.withValues(alpha: 0.1),
+            border: Border.all(
+              color: _venvExists ? Colors.green : Colors.orange,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    _venvExists ? Icons.folder_special : Icons.info_outline,
+                    color: _venvExists ? Colors.green : Colors.orange,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Virtual Environment',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _venvExists
+                              ? 'Active at ${PythonDependencyService.venvPath}'
+                              : 'Not configured (prevents Windows long path errors)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white70 : Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (!_venvExists && (_pythonStatus?.isInstalled ?? false)) ...[
+                const SizedBox(height: 12),
+                const Divider(),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.lightbulb_outline, size: 16, color: Colors.amber),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Create a virtual environment to avoid Windows MAX_PATH errors when installing EasyOCR',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.white60 : Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: _isCreatingVenv ? null : _createVirtualEnvironment,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: _isCreatingVenv
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.add_circle_outline),
+                  label: Text(_isCreatingVenv ? 'Creating...' : 'Create Virtual Environment'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 

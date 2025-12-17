@@ -5,6 +5,9 @@ import 'package:process_run/process_run.dart';
 class PythonDependencyService {
   final Shell _shell = Shell();
 
+  /// Short path for virtual environment to avoid Windows MAX_PATH issues
+  static String get venvPath => 'C:\\wild_venv';
+
   /// Required Python packages for WILD Automate
   static const Map<String, String> requiredPackages = {
     'pyautogui': '0.9.53',
@@ -42,13 +45,87 @@ class PythonDependencyService {
     return PythonCheckResult(isInstalled: false);
   }
 
-  /// Check status of all required packages
+  /// Check if virtual environment exists and is configured
+  Future<bool> checkVirtualEnvironment() async {
+    final venvDir = Directory(venvPath);
+    if (!await venvDir.exists()) {
+      return false;
+    }
+
+    final pythonExe = File('$venvPath\\Scripts\\python.exe');
+    return await pythonExe.exists();
+  }
+
+  /// Create virtual environment at short path
+  Future<CreateVenvResult> createVirtualEnvironment(
+    String pythonCommand,
+    void Function(String)? onProgress,
+  ) async {
+    try {
+      onProgress?.call('Creating virtual environment at $venvPath...');
+
+      // Create venv directory if it doesn't exist
+      final venvDir = Directory(venvPath);
+      if (await venvDir.exists()) {
+        onProgress?.call('Removing existing virtual environment...');
+        await venvDir.delete(recursive: true);
+      }
+
+      // Create new virtual environment
+      final process = await Process.start(
+        pythonCommand,
+        ['-m', 'venv', venvPath, '--clear'],
+      );
+
+      final stdout = StringBuffer();
+      final stderr = StringBuffer();
+
+      process.stdout.listen((data) {
+        final text = String.fromCharCodes(data);
+        stdout.write(text);
+        onProgress?.call(text.trim());
+      });
+
+      process.stderr.listen((data) {
+        final text = String.fromCharCodes(data);
+        stderr.write(text);
+      });
+
+      final exitCode = await process.exitCode;
+
+      if (exitCode == 0) {
+        onProgress?.call('Virtual environment created successfully!');
+        return CreateVenvResult(success: true);
+      } else {
+        return CreateVenvResult(
+          success: false,
+          error: 'Failed to create virtual environment: ${stderr.toString()}',
+        );
+      }
+    } catch (e) {
+      return CreateVenvResult(
+        success: false,
+        error: 'Error creating virtual environment: $e',
+      );
+    }
+  }
+
+  /// Get the Python command for the virtual environment
+  String getVenvPythonCommand() {
+    return '$venvPath\\Scripts\\python.exe';
+  }
+
+  /// Check status of all required packages (in virtual environment if it exists)
   Future<Map<String, PackageStatus>> checkPackages(String pythonCommand) async {
     final statuses = <String, PackageStatus>{};
 
+    // Use venv Python if available
+    final venvExists = await checkVirtualEnvironment();
+    final effectivePython = venvExists ? getVenvPythonCommand() : pythonCommand;
+
     for (final package in requiredPackages.keys) {
       try {
-        final result = await _shell.run('$pythonCommand -m pip show $package');
+        final result = await _shell.run('$effectivePython -m pip show $package');
 
         if (result.first.exitCode == 0) {
           final output = result.first.stdout.toString();
@@ -81,18 +158,39 @@ class PythonDependencyService {
     return statuses;
   }
 
-  /// Install a single package
+  /// Install a single package with long path workarounds
   Future<InstallResult> installPackage(
     String pythonCommand,
     String packageName,
     void Function(String)? onProgress,
   ) async {
     try {
-      onProgress?.call('Installing $packageName...');
+      // Ensure we're using venv Python
+      final venvExists = await checkVirtualEnvironment();
+      if (!venvExists) {
+        return InstallResult(
+          success: false,
+          error: 'Virtual environment not found. Please create it first.',
+        );
+      }
 
+      final venvPython = getVenvPythonCommand();
+      onProgress?.call('Installing $packageName to virtual environment...');
+
+      // Use pip with options to avoid long path issues:
+      // --no-cache-dir: Don't use cache (avoids long temp paths)
+      // --prefer-binary: Use pre-built wheels when possible
+      // --upgrade: Ensure latest compatible version
       final process = await Process.start(
-        pythonCommand,
-        ['-m', 'pip', 'install', packageName],
+        venvPython,
+        [
+          '-m',
+          'pip',
+          'install',
+          '--no-cache-dir',
+          '--prefer-binary',
+          packageName,
+        ],
       );
 
       final stdout = StringBuffer();
@@ -207,14 +305,25 @@ class PackageStatus {
 /// Result of package installation
 class InstallResult {
   final bool success;
-  final String packageName;
-  final String message;
+  final String? packageName;
+  final String? message;
   final String? error;
 
   const InstallResult({
     required this.success,
-    required this.packageName,
-    required this.message,
+    this.packageName,
+    this.message,
+    this.error,
+  });
+}
+
+/// Result of virtual environment creation
+class CreateVenvResult {
+  final bool success;
+  final String? error;
+
+  const CreateVenvResult({
+    required this.success,
     this.error,
   });
 }

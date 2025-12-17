@@ -140,8 +140,17 @@ class PythonExecutionService {
     }
   }
 
-  /// Get Python command (python or python3)
+  /// Get Python command (prefer venv, fallback to system Python)
   Future<String?> _getPythonCommand() async {
+    // First, check if virtual environment exists
+    const venvPath = 'C:\\wild_venv';
+    final venvPython = File('$venvPath\\Scripts\\python.exe');
+
+    if (await venvPython.exists()) {
+      return venvPython.path;
+    }
+
+    // Fallback to system Python
     // Try python3 first
     try {
       final result = await _shell.run('python3 --version');
