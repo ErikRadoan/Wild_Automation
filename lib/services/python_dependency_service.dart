@@ -115,44 +115,56 @@ class PythonDependencyService {
     return '$venvPath\\Scripts\\python.exe';
   }
 
-  /// Check status of all required packages (in virtual environment if it exists)
+  /// Check status of all required packages (checks both venv and global installation)
   Future<Map<String, PackageStatus>> checkPackages(String pythonCommand) async {
     final statuses = <String, PackageStatus>{};
 
-    // Use venv Python if available
+    // Check if venv exists
     final venvExists = await checkVirtualEnvironment();
-    final effectivePython = venvExists ? getVenvPythonCommand() : pythonCommand;
+    final venvPython = venvExists ? getVenvPythonCommand() : null;
 
     for (final package in requiredPackages.keys) {
-      try {
-        final result = await _shell.run('$effectivePython -m pip show $package');
+      bool isInstalled = false;
+      String? installedVersion;
+      String? error;
 
-        if (result.first.exitCode == 0) {
-          final output = result.first.stdout.toString();
-          final versionMatch = RegExp(r'Version:\s*(.+)').firstMatch(output);
-          final version = versionMatch?.group(1)?.trim() ?? 'unknown';
-
-          statuses[package] = PackageStatus(
-            name: package,
-            isInstalled: true,
-            installedVersion: version,
-            requiredVersion: requiredPackages[package]!,
-          );
-        } else {
-          statuses[package] = PackageStatus(
-            name: package,
-            isInstalled: false,
-            requiredVersion: requiredPackages[package]!,
-          );
+      // First, try to check in venv (if it exists)
+      if (venvPython != null) {
+        try {
+          final result = await _shell.run('$venvPython -m pip show $package');
+          if (result.first.exitCode == 0) {
+            final output = result.first.stdout.toString();
+            final versionMatch = RegExp(r'Version:\s*(.+)').firstMatch(output);
+            installedVersion = versionMatch?.group(1)?.trim() ?? 'unknown';
+            isInstalled = true;
+          }
+        } catch (e) {
+          // Continue to check globally
         }
-      } catch (e) {
-        statuses[package] = PackageStatus(
-          name: package,
-          isInstalled: false,
-          requiredVersion: requiredPackages[package]!,
-          error: e.toString(),
-        );
       }
+
+      // If not found in venv (or venv doesn't exist), check globally
+      if (!isInstalled) {
+        try {
+          final result = await _shell.run('$pythonCommand -m pip show $package');
+          if (result.first.exitCode == 0) {
+            final output = result.first.stdout.toString();
+            final versionMatch = RegExp(r'Version:\s*(.+)').firstMatch(output);
+            installedVersion = versionMatch?.group(1)?.trim() ?? 'unknown';
+            isInstalled = true;
+          }
+        } catch (e) {
+          error = e.toString();
+        }
+      }
+
+      statuses[package] = PackageStatus(
+        name: package,
+        isInstalled: isInstalled,
+        installedVersion: installedVersion,
+        requiredVersion: requiredPackages[package]!,
+        error: error,
+      );
     }
 
     return statuses;
@@ -255,8 +267,23 @@ class PythonDependencyService {
     return results;
   }
 
-  /// Check if EasyOCR is installed
+  /// Check if EasyOCR is installed (checks both venv and global installation)
   Future<bool> checkEasyOCR() async {
+    // Check in venv first (if it exists)
+    final venvExists = await checkVirtualEnvironment();
+    if (venvExists) {
+      try {
+        final venvPython = getVenvPythonCommand();
+        final result = await _shell.run('$venvPython -c "import easyocr"');
+        if (result.first.exitCode == 0) {
+          return true;
+        }
+      } catch (_) {
+        // Continue to check globally
+      }
+    }
+
+    // Check globally
     try {
       final result = await _shell.run('python -c "import easyocr"');
       return result.first.exitCode == 0;

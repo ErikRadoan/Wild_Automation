@@ -98,6 +98,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // Recheck dependencies
         await Future.delayed(const Duration(seconds: 1));
         await _checkDependencies();
+
+        // Update the global settings service
+        if (!mounted) return;
+        final settings = context.read<SettingsService>();
+        await settings.checkDependencies();
       } else {
         if (!mounted) return;
         setState(() {
@@ -175,6 +180,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // Recheck dependencies
       await Future.delayed(const Duration(seconds: 1));
       await _checkDependencies();
+
+      // Update the global settings service to unlock projects
+      if (!mounted) return;
+      final settings = context.read<SettingsService>();
+      await settings.checkDependencies();
+
+      // Show success message if all dependencies are now installed
+      if (!settings.hasMissingDependencies) {
+        setState(() {
+          _installLogs.add('\n✅ All dependencies installed successfully!');
+          _installLogs.add('You can now create and open projects.');
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
