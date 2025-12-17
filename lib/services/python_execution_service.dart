@@ -1005,6 +1005,118 @@ class Screen:
         print("[OCR] Dimensions: " + str(width) + " x " + str(height))
         
         return Screen.ocr_region(left, top, width, height, language)
+    
+    @staticmethod
+    def findText(screen_object, text: str, language: str = 'en'):
+        """Find text within a screen object and return its center position on screen
+        
+        Args:
+            screen_object: A ScreenObject (rectangle) representing the region to search
+            text: The text to find
+            language: Language code (default 'en')
+
+        Returns:
+            Tuple of (x, y) representing the center position of the found text on screen,
+            or None if text not found
+        """
+        try:
+            import easyocr
+            import numpy as np
+            import os
+            from PIL import ImageGrab
+            
+            # Validate screen object
+            if hasattr(screen_object, 'is_point') and screen_object.is_point:
+                raise ValueError("Cannot search for text in point object '" + screen_object.name + "'. Use a rectangle object.")
+            
+            # Rectangle object - has x, y, x2, y2
+            x1 = screen_object.x
+            y1 = screen_object.y
+            x2 = screen_object.x2
+            y2 = screen_object.y2
+            
+            # Calculate bounding box (always use min/max for correct corners)
+            left = min(x1, x2)
+            top = min(y1, y2)
+            right = max(x1, x2)
+            bottom = max(y1, y2)
+            width = right - left
+            height = bottom - top
+            
+            print("\\n" + "="*70)
+            print("[findText] Searching for text: '" + str(text) + "'")
+            print("[findText] In ScreenObject: " + str(screen_object.name))
+            print("[findText] Region: (" + str(left) + ", " + str(top) + ") to (" + str(right) + ", " + str(bottom) + ")")
+            print("[findText] Size: " + str(width) + " x " + str(height))
+            
+            # Use a persistent cache directory for the model
+            model_storage_directory = os.path.join(os.path.expanduser('~'), '.wild_automation', 'easyocr_models')
+            os.makedirs(model_storage_directory, exist_ok=True)
+            
+            # Create or reuse reader with cached model
+            if not hasattr(Screen, '_ocr_reader') or not hasattr(Screen, '_ocr_language') or Screen._ocr_language != language:
+                print("[findText] Initializing EasyOCR reader for language: " + str(language))
+                Screen._ocr_reader = easyocr.Reader([language], gpu=False, model_storage_directory=model_storage_directory)
+                Screen._ocr_language = language
+            
+            # Take screenshot using PIL ImageGrab
+            screenshot = ImageGrab.grab(bbox=(left, top, right, bottom), all_screens=False)
+            
+            print("[findText] Screenshot captured: " + str(screenshot.size[0]) + " x " + str(screenshot.size[1]))
+            
+            # Convert to numpy array
+            img_array = np.array(screenshot)
+            
+            # Perform OCR with detailed results (detail=1 returns bbox, text, confidence)
+            print("[findText] Running EasyOCR text detection...")
+            results = Screen._ocr_reader.readtext(img_array, detail=1)
+            
+            print("[findText] Found " + str(len(results)) + " text region(s)")
+            
+            # Search for the text in results
+            for i, detection in enumerate(results):
+                bbox, detected_text, confidence = detection
+                
+                # Handle encoding for safe printing
+                safe_detected_text = detected_text.encode('ascii', 'replace').decode('ascii')
+                print("[findText] Region " + str(i+1) + ": '" + safe_detected_text + "' (confidence: " + str(round(confidence, 2)) + ")")
+                
+                # Check if detected text contains the search text (case-insensitive)
+                if text.lower() in detected_text.lower():
+                    print("[findText] MATCH FOUND in region " + str(i+1))
+                    
+                    # bbox is [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
+                    # Calculate center of the bounding box
+                    x_coords = [point[0] for point in bbox]
+                    y_coords = [point[1] for point in bbox]
+                    center_x = int(sum(x_coords) / len(x_coords))
+                    center_y = int(sum(y_coords) / len(y_coords))
+                    
+                    # Convert to screen coordinates by adding the object's top-left position
+                    screen_x = left + center_x
+                    screen_y = top + center_y
+                    
+                    print("[findText] Text center in region: (" + str(center_x) + ", " + str(center_y) + ")")
+                    print("[findText] Screen coordinates: (" + str(screen_x) + ", " + str(screen_y) + ")")
+                    print("="*70 + "\\n")
+                    
+                    return (screen_x, screen_y)
+            
+            print("[findText] Text '" + str(text) + "' not found in region")
+            print("="*70 + "\\n")
+            return None
+            
+        except ImportError as e:
+            error_msg = "Missing dependency: " + str(e)
+            print("[findText ERROR] " + error_msg)
+            print("Install with: pip install easyocr pillow pywin32")
+            return None
+        except Exception as e:
+            error_msg = str(e).encode('ascii', 'replace').decode('ascii')
+            print("[findText ERROR] " + error_msg)
+            import traceback
+            traceback.print_exc()
+            return None
 
 class Utils:
     """Utility functions"""

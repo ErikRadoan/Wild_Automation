@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:code_text_field/code_text_field.dart';
 import 'package:highlight/languages/python.dart';
@@ -41,10 +41,7 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
   void initState() {
     super.initState();
 
-    _controller = CodeController(
-      text: widget.initialCode,
-      language: python,
-    );
+    _controller = CodeController(text: widget.initialCode, language: python);
 
     _controller.addListener(_onTextChanged);
 
@@ -77,7 +74,9 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
       _currentWord = match.group(0)!;
       _wordStartPos = match.start;
 
-      print('[Autocomplete] Searching for: "$_currentWord" in ${_apiItems.length} items');
+      print(
+        '[Autocomplete] Searching for: "$_currentWord" in ${_apiItems.length} items',
+      );
 
       _suggestions = _apiItems.where((item) {
         return item.name.toLowerCase().contains(_currentWord.toLowerCase());
@@ -87,8 +86,12 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
 
       if (_suggestions.isNotEmpty) {
         _suggestions.sort((a, b) {
-          final aStarts = a.name.toLowerCase().startsWith(_currentWord.toLowerCase());
-          final bStarts = b.name.toLowerCase().startsWith(_currentWord.toLowerCase());
+          final aStarts = a.name.toLowerCase().startsWith(
+            _currentWord.toLowerCase(),
+          );
+          final bStarts = b.name.toLowerCase().startsWith(
+            _currentWord.toLowerCase(),
+          );
           if (aStarts && !bStarts) return -1;
           if (!aStarts && bStarts) return 1;
           return a.name.compareTo(b.name);
@@ -107,7 +110,9 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
   void _showAutocomplete() {
     _hideAutocomplete();
 
-    print('[Autocomplete] Showing overlay with ${_suggestions.length} suggestions');
+    print(
+      '[Autocomplete] Showing overlay with ${_suggestions.length} suggestions',
+    );
 
     _autocompleteOverlay = OverlayEntry(
       builder: (context) => _buildAutocompleteWidget(),
@@ -124,7 +129,10 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
   Widget _buildAutocompleteWidget() {
     // Calculate approximate cursor position
     final lineHeight = 21.0; // 14px font * 1.5 line height
-    final text = _controller.text.substring(0, _controller.selection.baseOffset);
+    final text = _controller.text.substring(
+      0,
+      _controller.selection.baseOffset,
+    );
     final lines = text.split('\n').length;
     final yOffset = lines * lineHeight;
 
@@ -144,18 +152,12 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
           child: Container(
             constraints: const BoxConstraints(maxHeight: 350),
             decoration: BoxDecoration(
-              border: Border.all(
-                color: const Color(0xFF56585C),
-                width: 1.5,
-              ),
+              border: Border.all(color: const Color(0xFF56585C), width: 1.5),
               borderRadius: BorderRadius.circular(8),
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF2D2D30),
-                  Color(0xFF252526),
-                ],
+                colors: [Color(0xFF2D2D30), Color(0xFF252526)],
               ),
             ),
             child: Column(
@@ -164,7 +166,10 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
               children: [
                 // Header with gradient
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFF1E1E1E), Color(0xFF252526)],
@@ -172,7 +177,9 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                     border: const Border(
                       bottom: BorderSide(color: Color(0xFF56585C), width: 1),
                     ),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(7),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -200,7 +207,10 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF3E3E42),
                           borderRadius: BorderRadius.circular(4),
@@ -245,7 +255,10 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                           }
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 11,
+                          ),
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? const Color(0xFF56585C).withValues(alpha: 0.4)
@@ -265,10 +278,14 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                               Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: _getColor(item.category).withValues(alpha: 0.15),
+                                  color: _getColor(
+                                    item.category,
+                                  ).withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: _getColor(item.category).withValues(alpha: 0.3),
+                                    color: _getColor(
+                                      item.category,
+                                    ).withValues(alpha: 0.3),
                                   ),
                                 ),
                                 child: Icon(
@@ -289,10 +306,17 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                                         style: TextStyle(
                                           fontFamily: 'monospace',
                                           fontSize: 13,
-                                          color: isSelected ? Colors.white : Colors.white70,
-                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : Colors.white70,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w600
+                                              : FontWeight.w500,
                                         ),
-                                        children: _buildHighlightedText(item.name, _currentWord),
+                                        children: _buildHighlightedText(
+                                          item.name,
+                                          _currentWord,
+                                        ),
                                       ),
                                     ),
                                     // Signature
@@ -300,7 +324,9 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                                     Text(
                                       item.signature,
                                       style: TextStyle(
-                                        color: isSelected ? Colors.grey[300] : Colors.grey[500],
+                                        color: isSelected
+                                            ? Colors.grey[300]
+                                            : Colors.grey[500],
                                         fontSize: 11,
                                         fontFamily: 'monospace',
                                       ),
@@ -313,12 +339,19 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                               const SizedBox(width: 10),
                               // Category badge
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: _getColor(item.category).withValues(alpha: 0.2),
+                                  color: _getColor(
+                                    item.category,
+                                  ).withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color: _getColor(item.category).withValues(alpha: 0.4),
+                                    color: _getColor(
+                                      item.category,
+                                    ).withValues(alpha: 0.4),
                                   ),
                                 ),
                                 child: Text(
@@ -374,14 +407,16 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
         spans.add(TextSpan(text: text.substring(lastIndex, index)));
       }
 
-      spans.add(TextSpan(
-        text: text.substring(index, index + query.length),
-        style: const TextStyle(
-          color: Colors.lightBlueAccent,
-          fontWeight: FontWeight.bold,
-          decoration: TextDecoration.underline,
+      spans.add(
+        TextSpan(
+          text: text.substring(index, index + query.length),
+          style: const TextStyle(
+            color: Colors.lightBlueAccent,
+            fontWeight: FontWeight.bold,
+            decoration: TextDecoration.underline,
+          ),
         ),
-      ));
+      );
 
       lastIndex = index + query.length;
     }
@@ -398,16 +433,19 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
       insertText = '$insertText()';
     }
 
-    final newText = text.substring(0, _wordStartPos) +
-                    insertText +
-                    text.substring(_controller.selection.baseOffset);
+    final newText =
+        text.substring(0, _wordStartPos) +
+        insertText +
+        text.substring(_controller.selection.baseOffset);
 
     _controller.text = newText;
 
     // Position cursor inside brackets if we added them
     final cursorOffset = insertText.endsWith('()')
-        ? _wordStartPos + insertText.length - 1  // Inside the brackets
-        : _wordStartPos + insertText.length;     // After the text
+        ? _wordStartPos +
+              insertText.length -
+              1 // Inside the brackets
+        : _wordStartPos + insertText.length; // After the text
 
     _controller.selection = TextSelection.collapsed(offset: cursorOffset);
 
@@ -418,28 +456,114 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
   void _loadApiItems(List<ScreenObject> objects) {
     _apiItems = [
       // Window
-      ApiItem('Window.maximize', 'Window.maximize(title: str) -> bool', 'Maximize a window', 'Window'),
-      ApiItem('Window.minimize', 'Window.minimize(title: str) -> bool', 'Minimize a window', 'Window'),
-      ApiItem('Window.activate', 'Window.activate(title: str) -> bool', 'Focus a window', 'Window'),
-      ApiItem('Window.focus', 'Window.focus(title: str) -> bool', 'Focus and wait for window to be interactable', 'Window'),
-      ApiItem('Window.close', 'Window.close(title: str) -> bool', 'Close a window', 'Window'),
-      ApiItem('Window.exists', 'Window.exists(title: str) -> bool', 'Check if window exists', 'Window'),
+      ApiItem(
+        'Window.maximize',
+        'Window.maximize(title: str) -> bool',
+        'Maximize a window',
+        'Window',
+      ),
+      ApiItem(
+        'Window.minimize',
+        'Window.minimize(title: str) -> bool',
+        'Minimize a window',
+        'Window',
+      ),
+      ApiItem(
+        'Window.activate',
+        'Window.activate(title: str) -> bool',
+        'Focus a window',
+        'Window',
+      ),
+      ApiItem(
+        'Window.focus',
+        'Window.focus(title: str) -> bool',
+        'Focus and wait for window to be interactable',
+        'Window',
+      ),
+      ApiItem(
+        'Window.close',
+        'Window.close(title: str) -> bool',
+        'Close a window',
+        'Window',
+      ),
+      ApiItem(
+        'Window.exists',
+        'Window.exists(title: str) -> bool',
+        'Check if window exists',
+        'Window',
+      ),
 
       // Mouse
-      ApiItem('Mouse.click', 'Mouse.click(x: int, y: int, button="left") OR Mouse.click(object)', 'Click at coordinates or object', 'Mouse'),
-      ApiItem('Mouse.move', 'Mouse.move(x: int, y: int, duration=0.0) OR Mouse.move(object)', 'Move mouse to coordinates or object', 'Mouse'),
-      ApiItem('Mouse.drag', 'Mouse.drag(x: int, y: int, duration=0.5) OR Mouse.drag(object)', 'Drag mouse to coordinates or object', 'Mouse'),
-      ApiItem('Mouse.scroll', 'Mouse.scroll(clicks: int)', 'Scroll mouse wheel', 'Mouse'),
+      ApiItem(
+        'Mouse.click',
+        'Mouse.click(x: int, y: int, button="left") OR Mouse.click(object)',
+        'Click at coordinates or object',
+        'Mouse',
+      ),
+      ApiItem(
+        'Mouse.move',
+        'Mouse.move(x: int, y: int, duration=0.0) OR Mouse.move(object)',
+        'Move mouse to coordinates or object',
+        'Mouse',
+      ),
+      ApiItem(
+        'Mouse.drag',
+        'Mouse.drag(x: int, y: int, duration=0.5) OR Mouse.drag(object)',
+        'Drag mouse to coordinates or object',
+        'Mouse',
+      ),
+      ApiItem(
+        'Mouse.scroll',
+        'Mouse.scroll(clicks: int)',
+        'Scroll mouse wheel',
+        'Mouse',
+      ),
 
       // Keyboard
-      ApiItem('Keyboard.write', 'Keyboard.write(text: str, interval=0.0)', 'Type text', 'Keyboard'),
-      ApiItem('Keyboard.press', 'Keyboard.press(key: str)', 'Press a key', 'Keyboard'),
-      ApiItem('Keyboard.hotkey', 'Keyboard.hotkey(*keys)', 'Press key combo', 'Keyboard'),
+      ApiItem(
+        'Keyboard.write',
+        'Keyboard.write(text: str, interval=0.0)',
+        'Type text',
+        'Keyboard',
+      ),
+      ApiItem(
+        'Keyboard.press',
+        'Keyboard.press(key: str)',
+        'Press a key',
+        'Keyboard',
+      ),
+      ApiItem(
+        'Keyboard.hotkey',
+        'Keyboard.hotkey(*keys)',
+        'Press key combo',
+        'Keyboard',
+      ),
 
       // Screen
-      ApiItem('Screen.ocr_object', 'Screen.ocr_object(obj, language="en") -> str', 'OCR from object', 'Screen'),
-      ApiItem('Screen.ocr_region', 'Screen.ocr_region(x, y, w, h, language="en") -> str', 'OCR from region', 'Screen'),
-      ApiItem('Screen.screenshot', 'Screen.screenshot(region=None) -> str', 'Take screenshot', 'Screen'),
+      ApiItem(
+        'Screen.ocr_object',
+        'Screen.ocr_object(obj, language="en") -> str',
+        'OCR from object',
+        'Screen',
+      ),
+      ApiItem(
+        'Screen.ocr_region',
+        'Screen.ocr_region(x, y, w, h, language="en") -> str',
+        'OCR from region',
+        'Screen',
+      ),
+      ApiItem(
+        'Screen.findText',
+        'Screen.findText(obj, text: str, language="en") -> Tuple[int, int]',
+        'Find text in object region',
+        'Screen',
+      ),
+      ApiItem(
+        'Screen.screenshot',
+        'Screen.screenshot(region=None) -> str',
+        'Take screenshot',
+        'Screen',
+      ),
 
       // Utils
       ApiItem('wait', 'wait(seconds: float)', 'Pause execution', 'Utility'),
@@ -447,7 +571,12 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
 
       // Python
       ApiItem('print', 'print(*values)', 'Print to console', 'Python'),
-      ApiItem('range', 'range(start, stop, step=1)', 'Generate sequence', 'Python'),
+      ApiItem(
+        'range',
+        'range(start, stop, step=1)',
+        'Generate sequence',
+        'Python',
+      ),
       ApiItem('len', 'len(obj) -> int', 'Get length', 'Python'),
       ApiItem('str', 'str(obj) -> str', 'Convert to string', 'Python'),
       ApiItem('int', 'int(value) -> int', 'Convert to integer', 'Python'),
@@ -457,13 +586,22 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
       ApiItem('try', 'try:', 'Try-except block', 'Python'),
 
       // ScreenObjects
-      ApiItem('ScreenObjects', 'ScreenObjects.{name}', 'Access screen objects', 'Objects'),
-      ...objects.map((o) => ApiItem(
-        'ScreenObjects.${o.name}',
-        o.isPoint ? 'Point (${o.x}, ${o.y})' : 'Rect (${o.x},${o.y}) to (${o.x2},${o.y2})',
-        o.description ?? (o.isPoint ? 'Point object' : 'Rectangle object'),
+      ApiItem(
+        'ScreenObjects',
+        'ScreenObjects.{name}',
+        'Access screen objects',
         'Objects',
-      )),
+      ),
+      ...objects.map(
+        (o) => ApiItem(
+          'ScreenObjects.${o.name}',
+          o.isPoint
+              ? 'Point (${o.x}, ${o.y})'
+              : 'Rect (${o.x},${o.y}) to (${o.x2},${o.y2})',
+          o.description ?? (o.isPoint ? 'Point object' : 'Rectangle object'),
+          'Objects',
+        ),
+      ),
     ];
   }
 
@@ -483,7 +621,9 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                 },
                 child: FocusScope(
                   onKeyEvent: (node, event) {
-                    if (event is KeyDownEvent && _autocompleteOverlay != null && _suggestions.isNotEmpty) {
+                    if (event is KeyDownEvent &&
+                        _autocompleteOverlay != null &&
+                        _suggestions.isNotEmpty) {
                       // Handle Tab
                       if (event.logicalKey == LogicalKeyboardKey.tab) {
                         _insertSuggestion(_suggestions[_selectedIndex]);
@@ -491,13 +631,17 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                       }
                       // Handle Arrow Up
                       else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-                        _selectedIndex = (_selectedIndex - 1 + _suggestions.length) % _suggestions.length;
+                        _selectedIndex =
+                            (_selectedIndex - 1 + _suggestions.length) %
+                            _suggestions.length;
                         _rebuildAutocomplete();
                         return KeyEventResult.handled;
                       }
                       // Handle Arrow Down
-                      else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                        _selectedIndex = (_selectedIndex + 1) % _suggestions.length;
+                      else if (event.logicalKey ==
+                          LogicalKeyboardKey.arrowDown) {
+                        _selectedIndex =
+                            (_selectedIndex + 1) % _suggestions.length;
                         _rebuildAutocomplete();
                         return KeyEventResult.handled;
                       }
@@ -558,7 +702,6 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
       },
     );
   }
-
 
   Widget _buildToolbar() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -629,7 +772,9 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
               color: isDark ? const Color(0xFF2D2D30) : const Color(0xFFF5F5F5),
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
-                color: isDark ? const Color(0xFF3E3E42) : const Color(0xFFE0E0E0),
+                color: isDark
+                    ? const Color(0xFF3E3E42)
+                    : const Color(0xFFE0E0E0),
               ),
             ),
             child: Row(
@@ -650,15 +795,21 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
             borderRadius: BorderRadius.circular(6),
             child: InkWell(
               borderRadius: BorderRadius.circular(6),
-              onTap: () => setState(() => _showApiReference = !_showApiReference),
+              onTap: () =>
+                  setState(() => _showApiReference = !_showApiReference),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: _showApiReference
                         ? const Color(0xFF56585C)
-                        : (isDark ? const Color(0xFF3E3E42) : const Color(0xFFE0E0E0)),
+                        : (isDark
+                              ? const Color(0xFF3E3E42)
+                              : const Color(0xFFE0E0E0)),
                   ),
                 ),
                 child: Row(
@@ -749,7 +900,9 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
               color: isDark ? const Color(0xFF3E3E42) : Colors.white,
               borderRadius: BorderRadius.circular(4),
               border: Border.all(
-                color: isDark ? const Color(0xFF56585C) : const Color(0xFFD0D0D0),
+                color: isDark
+                    ? const Color(0xFF56585C)
+                    : const Color(0xFFD0D0D0),
               ),
               boxShadow: [
                 BoxShadow(
@@ -782,7 +935,6 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
     );
   }
 
-
   Widget _buildApiPanel() {
     final categories = <String, List<ApiItem>>{};
     for (final item in _apiItems) {
@@ -793,7 +945,9 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
       height: 280,
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
-        border: const Border(top: BorderSide(color: Color(0xFF56585C), width: 2)),
+        border: const Border(
+          top: BorderSide(color: Color(0xFF56585C), width: 2),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.3),
@@ -849,7 +1003,9 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                           color: const Color(0xFF2D2D30),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: _getColor(item.category).withValues(alpha: 0.2),
+                            color: _getColor(
+                              item.category,
+                            ).withValues(alpha: 0.2),
                           ),
                         ),
                         child: Material(
@@ -859,9 +1015,14 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                             onTap: () {
                               final cursor = _controller.selection.baseOffset;
                               final text = _controller.text;
-                              final newText = text.substring(0, cursor) + item.name + text.substring(cursor);
+                              final newText =
+                                  text.substring(0, cursor) +
+                                  item.name +
+                                  text.substring(cursor);
                               _controller.text = newText;
-                              _controller.selection = TextSelection.collapsed(offset: cursor + item.name.length);
+                              _controller.selection = TextSelection.collapsed(
+                                offset: cursor + item.name.length,
+                              );
                               _focusNode.requestFocus();
                             },
                             child: Padding(
@@ -871,7 +1032,9 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                                   Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: _getColor(item.category).withValues(alpha: 0.15),
+                                      color: _getColor(
+                                        item.category,
+                                      ).withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Icon(
@@ -883,7 +1046,8 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           item.name,
@@ -952,27 +1116,43 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
 
   IconData _getIcon(String category) {
     switch (category) {
-      case 'Window': return Icons.window;
-      case 'Mouse': return Icons.mouse;
-      case 'Keyboard': return Icons.keyboard;
-      case 'Screen': return Icons.screenshot;
-      case 'Objects': return Icons.crop_free;
-      case 'Utility': return Icons.build;
-      case 'Python': return Icons.code;
-      default: return Icons.functions;
+      case 'Window':
+        return Icons.window;
+      case 'Mouse':
+        return Icons.mouse;
+      case 'Keyboard':
+        return Icons.keyboard;
+      case 'Screen':
+        return Icons.screenshot;
+      case 'Objects':
+        return Icons.crop_free;
+      case 'Utility':
+        return Icons.build;
+      case 'Python':
+        return Icons.code;
+      default:
+        return Icons.functions;
     }
   }
 
   Color _getColor(String category) {
     switch (category) {
-      case 'Window': return Colors.blue;
-      case 'Mouse': return Colors.purple;
-      case 'Keyboard': return Colors.orange;
-      case 'Screen': return Colors.green;
-      case 'Objects': return Colors.teal;
-      case 'Utility': return Colors.amber;
-      case 'Python': return Colors.grey;
-      default: return Colors.white70;
+      case 'Window':
+        return Colors.blue;
+      case 'Mouse':
+        return Colors.purple;
+      case 'Keyboard':
+        return Colors.orange;
+      case 'Screen':
+        return Colors.green;
+      case 'Objects':
+        return Colors.teal;
+      case 'Utility':
+        return Colors.amber;
+      case 'Python':
+        return Colors.grey;
+      default:
+        return Colors.white70;
     }
   }
 
@@ -985,7 +1165,6 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
   }
 }
 
-
 class ApiItem {
   final String name;
   final String signature;
@@ -994,4 +1173,3 @@ class ApiItem {
 
   ApiItem(this.name, this.signature, this.description, this.category);
 }
-

@@ -343,6 +343,65 @@ class Screen:
         x, y, width, height = screen_object
         return Screen.ocr_region(x, y, width, height, language)
 
+    @staticmethod
+    def findText(screen_object: Tuple[int, int, int, int], text: str, language: str = 'en') -> Optional[Tuple[int, int]]:
+        """Find text within a screen object and return its center position on screen
+
+        Args:
+            screen_object: Tuple of (x, y, width, height) representing the region to search
+            text: The text to find
+            language: Language code (default 'en')
+
+        Returns:
+            Tuple of (x, y) representing the center position of the found text on screen,
+            or None if text not found
+        """
+        try:
+            import easyocr
+            import numpy as np
+
+            x, y, width, height = screen_object
+
+            # Initialize reader (cached after first use)
+            if not hasattr(Screen, '_ocr_reader'):
+                Screen._ocr_reader = easyocr.Reader([language], gpu=False)
+
+            # Take screenshot of region
+            screenshot = pyautogui.screenshot(region=(x, y, width, height))
+
+            # Convert to numpy array
+            img_array = np.array(screenshot)
+
+            # Perform OCR with detailed results
+            results = Screen._ocr_reader.readtext(img_array, detail=1)
+
+            # Search for the text in results
+            for detection in results:
+                bbox, detected_text, confidence = detection
+
+                # Check if detected text contains the search text (case-insensitive)
+                if text.lower() in detected_text.lower():
+                    # bbox is [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
+                    # Calculate center of the bounding box
+                    x_coords = [point[0] for point in bbox]
+                    y_coords = [point[1] for point in bbox]
+                    center_x = sum(x_coords) // len(x_coords)
+                    center_y = sum(y_coords) // len(y_coords)
+
+                    # Convert to screen coordinates by adding the object's position
+                    screen_x = x + center_x
+                    screen_y = y + center_y
+
+                    return (screen_x, screen_y)
+
+            return None
+        except ImportError:
+            print("Error: easyocr not installed. Run: pip install easyocr")
+            return None
+        except Exception as e:
+            print(f"findText Error: {str(e)}")
+            return None
+
 class Utils:
     """Utility functions"""
     
