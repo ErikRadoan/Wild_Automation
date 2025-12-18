@@ -1,4 +1,5 @@
 ﻿import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/screen_object.dart';
 import '../models/window_target.dart';
 import '../models/flow.dart';
@@ -20,7 +21,12 @@ class StorageService {
 
   /// Initialize Hive and open boxes
   Future<void> initialize() async {
-    await Hive.initFlutter();
+    // Get the application support directory for proper data storage
+    final appDir = await getApplicationSupportDirectory();
+    final hivePath = '${appDir.path}/hive_data';
+
+    // Initialize Hive with the proper directory
+    await Hive.initFlutter(hivePath);
 
     // Register adapters (will be generated)
     Hive.registerAdapter(ScreenObjectAdapter());

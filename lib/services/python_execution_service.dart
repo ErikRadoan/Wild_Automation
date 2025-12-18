@@ -24,14 +24,28 @@ class PythonExecutionService {
       flowId: flowId,
     );
 
+    // Create log file for full execution logs
+    final logFile = await _createLogFile(executionId);
+    IOSink? logSink;
+
     try {
+      logSink = logFile.openWrite();
+      logSink.writeln('=== Execution Started: ${DateTime.now()} ===');
+      logSink.writeln('Flow ID: $flowId');
+      logSink.writeln('Execution ID: $executionId');
+      logSink.writeln('=' * 70);
+      logSink.writeln();
+
       // Check if Python is available
       final pythonCommand = await _getPythonCommand();
       if (pythonCommand == null) {
+        logSink.writeln('[ERROR] Python is not installed or not found in PATH');
+        await logSink.flush();
         return result.copyWith(
           status: ExecutionStatus.failed,
           endTime: DateTime.now(),
           errorMessage: 'Python is not installed or not found in PATH',
+          logFilePath: logFile.path,
         );
       }
 
@@ -67,6 +81,10 @@ class PythonExecutionService {
             // Parse and add logs
             for (final line in text.split('\n')) {
               if (line.isNotEmpty) {
+                // Write to log file (full output)
+                logSink?.writeln(line);
+
+                // Add to result (limited to 500 lines)
                 result = result.addLog(line);
                 onLog?.call(line);
               }
@@ -84,8 +102,14 @@ class PythonExecutionService {
             // Add error logs
             for (final line in text.split('\n')) {
               if (line.isNotEmpty) {
-                result = result.addLog('[ERROR] $line');
-                onLog?.call('[ERROR] $line');
+                final errorLine = '[ERROR] $line';
+
+                // Write to log file (full output)
+                logSink?.writeln(errorLine);
+
+                // Add to result (limited to 500 lines)
+                result = result.addLog(errorLine);
+                onLog?.call(errorLine);
               }
             }
           },
@@ -100,11 +124,20 @@ class PythonExecutionService {
         // Parse outputs from stdout
         final outputs = _parseOutputs(stdout, ioConfig.outputVariables);
 
+        // Write completion to log file
+        logSink.writeln();
+        logSink.writeln('=' * 70);
+        logSink.writeln('=== Execution Completed: ${DateTime.now()} ===');
+        logSink?.writeln('Exit Code: $exitCode');
+        logSink?.writeln('Status: ${exitCode == 0 ? "SUCCESS" : "FAILED"}');
+        await logSink?.flush();
+
         if (exitCode == 0) {
           result = result.copyWith(
             status: ExecutionStatus.completed,
             endTime: DateTime.now(),
             outputs: outputs,
+            logFilePath: logFile.path,
           );
         } else {
           result = result.copyWith(
@@ -113,6 +146,7 @@ class PythonExecutionService {
             errorMessage: 'Python script exited with code $exitCode',
             stackTrace: stderr,
             outputs: outputs,
+            logFilePath: logFile.path,
           );
         }
       } finally {
@@ -121,12 +155,19 @@ class PythonExecutionService {
         _currentProcess = null;
       }
     } catch (e, stackTrace) {
+      logSink?.writeln('[EXCEPTION] $e');
+      logSink?.writeln(stackTrace.toString());
+      await logSink?.flush();
+
       result = result.copyWith(
         status: ExecutionStatus.failed,
         endTime: DateTime.now(),
         errorMessage: e.toString(),
         stackTrace: stackTrace.toString(),
+        logFilePath: logFile.path,
       );
+    } finally {
+      await logSink?.close();
     }
 
     return result;
@@ -292,6 +333,21 @@ class PythonExecutionService {
     final tempFile = File('${tempDir.path}/wild_automation_${DateTime.now().millisecondsSinceEpoch}.py');
     await tempFile.writeAsString(code);
     return tempFile;
+  }
+
+  /// Create log file for execution logs
+  Future<File> _createLogFile(String executionId) async {
+    final tempDir = Directory.systemTemp;
+    final logsDir = Directory('${tempDir.path}/wild_automation_logs');
+
+    // Create logs directory if it doesn't exist
+    if (!await logsDir.exists()) {
+      await logsDir.create(recursive: true);
+    }
+
+    // Create log file with execution ID
+    final logFile = File('${logsDir.path}/run_$executionId.log');
+    return logFile;
   }
 
   /// Create wild_api.py file with full automation API
@@ -933,16 +989,6 @@ class Screen:
                 print("[OCR WARNING] Size mismatch detected!")
                 print("[OCR WARNING] This indicates DPI scaling or coordinate system issue.")
                 print("[OCR WARNING] Expected " + str(width) + "x" + str(height) + ", got " + str(actual_width) + "x" + str(actual_height))
-            
-            # Save screenshot for debugging
-            debug_dir = os.path.join(os.path.expanduser('~'), '.wild_automation', 'ocr_debug')
-            os.makedirs(debug_dir, exist_ok=True)
-            timestamp = int(time.time())
-            debug_path = os.path.join(debug_dir, 'ocr_' + str(timestamp) + '_x' + str(x) + '_y' + str(y) + '_w' + str(width) + '_h' + str(height) + '.png')
-            screenshot.save(debug_path)
-            print("[OCR] Debug screenshot saved:")
-            print("  - Path: " + str(debug_path))
-            print("  - Open this file to verify the captured region")
             
             # Perform OCR
             print("[OCR] Running EasyOCR text detection...")

@@ -683,9 +683,9 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
                               ),
                               padding: EdgeInsets.zero,
                               lineNumberStyle: const LineNumberStyle(
-                                width: 50,
+                                width: 60,
                                 textAlign: TextAlign.right,
-                                margin: 8,
+                                margin: 10,
                               ),
                             ),
                           ),
@@ -1173,3 +1173,4 @@ class ApiItem {
 
   ApiItem(this.name, this.signature, this.description, this.category);
 }
+

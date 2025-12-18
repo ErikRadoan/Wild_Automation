@@ -12,6 +12,10 @@ class ExecutionResult extends Equatable {
   final List<VariableOutput> outputs;
   final String? errorMessage;
   final String? stackTrace;
+  final String? logFilePath;
+
+  // Maximum number of logs to keep in memory (full logs saved to file)
+  static const int maxLogsInMemory = 500;
 
   const ExecutionResult({
     required this.executionId,
@@ -23,6 +27,7 @@ class ExecutionResult extends Equatable {
     this.outputs = const [],
     this.errorMessage,
     this.stackTrace,
+    this.logFilePath,
   });
 
   factory ExecutionResult.started({
@@ -44,6 +49,7 @@ class ExecutionResult extends Equatable {
     List<VariableOutput>? outputs,
     String? errorMessage,
     String? stackTrace,
+    String? logFilePath,
   }) {
     return ExecutionResult(
       executionId: executionId,
@@ -55,11 +61,18 @@ class ExecutionResult extends Equatable {
       outputs: outputs ?? this.outputs,
       errorMessage: errorMessage ?? this.errorMessage,
       stackTrace: stackTrace ?? this.stackTrace,
+      logFilePath: logFilePath ?? this.logFilePath,
     );
   }
 
   ExecutionResult addLog(String log) {
-    return copyWith(logs: [...logs, log]);
+    // Limit logs in memory to maxLogsInMemory lines (full logs saved to file)
+    final newLogs = [...logs, log];
+    if (newLogs.length > maxLogsInMemory) {
+      // Keep only the last maxLogsInMemory logs
+      return copyWith(logs: newLogs.sublist(newLogs.length - maxLogsInMemory));
+    }
+    return copyWith(logs: newLogs);
   }
 
   ExecutionResult addOutput(VariableOutput output) {
