@@ -24,6 +24,18 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
   List<String> _selectedOutputVariables = [];
 
   @override
+  void initState() {
+    super.initState();
+    // Load config after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final flowProvider = context.read<FlowProvider>();
+      if (flowProvider.flows.isNotEmpty) {
+        _loadFlowConfig(flowProvider.flows[_selectedFlowIndex]);
+      }
+    });
+  }
+
+  @override
   void dispose() {
     for (var controller in _inputControllers.values) {
       controller.dispose();
@@ -191,8 +203,12 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
                 ),
               );
             }),
-            onChanged: (value) {
-              if (value != null) {
+            onChanged: (value) async {
+              if (value != null && value != _selectedFlowIndex) {
+                // Save current flow's IO config before switching
+                final currentFlow = flowProvider.flows[_selectedFlowIndex];
+                await _saveCurrentFlowConfig(flowProvider, currentFlow);
+
                 setState(() {
                   _selectedFlowIndex = value;
                   // Clear selections when changing flow
@@ -200,6 +216,9 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
                   _selectedOutputVariables.clear();
                   _inputControllers.clear();
                 });
+
+                // Load new flow's IO config
+                _loadFlowConfig(flowProvider.flows[value]);
               }
             },
           ),
@@ -1023,5 +1042,52 @@ class _ExecuteScreenState extends State<ExecuteScreen> {
       screenObjects: screenObjects,
     );
   }
+
+  /// Save current flow's IO configuration
+  Future<void> _saveCurrentFlowConfig(FlowProvider flowProvider, model.Flow flow) async {
+    // Build IO config from current state
+    final ioConfig = <String, dynamic>{
+      'inputs': _selectedInputVariables.map((varName) {
+        return {
+          'variableName': varName,
+          'value': _inputControllers[varName]?.text ?? '',
+        };
+      }).toList(),
+      'outputs': _selectedOutputVariables,
+    };
+
+    // Update flow with new config
+    final updatedFlow = flow.copyWith(ioConfig: ioConfig);
+    await flowProvider.updateFlow(updatedFlow);
+  }
+
+  /// Load IO configuration from a flow
+  void _loadFlowConfig(model.Flow flow) {
+    if (flow.ioConfig != null) {
+      setState(() {
+        // Load inputs
+        final inputs = flow.ioConfig!['inputs'] as List<dynamic>?;
+        if (inputs != null) {
+          _selectedInputVariables.clear();
+          _inputControllers.clear();
+
+          for (var input in inputs) {
+            final varName = input['variableName'] as String;
+            final value = input['value'] as String;
+
+            _selectedInputVariables.add(varName);
+            _inputControllers[varName] = TextEditingController(text: value);
+          }
+        }
+
+        // Load outputs
+        final outputs = flow.ioConfig!['outputs'] as List<dynamic>?;
+        if (outputs != null) {
+          _selectedOutputVariables = outputs.cast<String>();
+        }
+      });
+    }
+  }
 }
+
 

@@ -27,6 +27,9 @@ class Flow extends Equatable {
   @HiveField(6)
   final List<String> tags;
 
+  @HiveField(7)
+  final Map<String, dynamic>? ioConfig;
+
   const Flow({
     required this.id,
     required this.name,
@@ -35,6 +38,7 @@ class Flow extends Equatable {
     required this.createdAt,
     required this.updatedAt,
     this.tags = const [],
+    this.ioConfig,
   });
 
   factory Flow.create({
@@ -43,6 +47,7 @@ class Flow extends Equatable {
     String pythonCode = '',
     String? description,
     List<String> tags = const [],
+    Map<String, dynamic>? ioConfig,
   }) {
     final now = DateTime.now();
     return Flow(
@@ -53,6 +58,7 @@ class Flow extends Equatable {
       createdAt: now,
       updatedAt: now,
       tags: tags,
+      ioConfig: ioConfig,
     );
   }
 
@@ -61,6 +67,7 @@ class Flow extends Equatable {
     String? pythonCode,
     String? description,
     List<String>? tags,
+    Map<String, dynamic>? ioConfig,
   }) {
     return Flow(
       id: id,
@@ -70,6 +77,7 @@ class Flow extends Equatable {
       createdAt: createdAt,
       updatedAt: DateTime.now(),
       tags: tags ?? this.tags,
+      ioConfig: ioConfig ?? this.ioConfig,
     );
   }
 
@@ -89,6 +97,7 @@ class Flow extends Equatable {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'tags': tags,
+      'ioConfig': ioConfig,
     };
   }
 
@@ -102,6 +111,7 @@ class Flow extends Equatable {
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
+      ioConfig: json['ioConfig'] as Map<String, dynamic>?,
     );
   }
 }
