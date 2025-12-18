@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 import 'models/project.dart';
 import 'services/storage_service.dart';
 import 'services/settings_service.dart';
+import 'services/update_service.dart';
 import 'services/localization_service.dart';
 import 'services/code_analyzer_service.dart';
 import 'services/python_execution_service.dart';
@@ -64,6 +65,7 @@ class WildAutomationAppLoader extends StatefulWidget {
 class _WildAutomationAppLoaderState extends State<WildAutomationAppLoader> with SingleTickerProviderStateMixin {
   StorageService? _storage;
   SettingsService? _settings;
+  UpdateService? _updateService;
   bool _isLoading = true;
   String _loadingMessage = 'Initializing...';
   late AnimationController _fadeController;
@@ -104,10 +106,17 @@ class _WildAutomationAppLoaderState extends State<WildAutomationAppLoader> with 
       await settings.initialize();
       await Future.delayed(const Duration(milliseconds: 300)); // Smooth transition
 
+      // Initialize update service
+      setState(() => _loadingMessage = 'Checking for updates...');
+      final updateService = UpdateService();
+      await updateService.checkForUpdates();
+      await Future.delayed(const Duration(milliseconds: 300)); // Smooth transition
+
       // Mark as loaded
       setState(() {
         _storage = storage;
         _settings = settings;
+        _updateService = updateService;
         _loadingMessage = 'Ready!';
       });
 
@@ -139,7 +148,7 @@ class _WildAutomationAppLoaderState extends State<WildAutomationAppLoader> with 
           child: child,
         );
       },
-      child: (_isLoading || _storage == null || _settings == null)
+      child: (_isLoading || _storage == null || _settings == null || _updateService == null)
           ? MaterialApp(
               key: const ValueKey('loading'),
               debugShowCheckedModeBanner: false,
@@ -149,6 +158,7 @@ class _WildAutomationAppLoaderState extends State<WildAutomationAppLoader> with 
               key: const ValueKey('main'),
               storage: _storage!,
               settings: _settings!,
+              updateService: _updateService!,
             ),
     );
   }
@@ -157,11 +167,13 @@ class _WildAutomationAppLoaderState extends State<WildAutomationAppLoader> with 
 class WildAutomationApp extends StatelessWidget {
   final StorageService storage;
   final SettingsService settings;
+  final UpdateService updateService;
 
   const WildAutomationApp({
     super.key,
     required this.storage,
     required this.settings,
+    required this.updateService,
   });
 
   @override
@@ -170,6 +182,7 @@ class WildAutomationApp extends StatelessWidget {
       providers: [
         Provider<StorageService>.value(value: storage),
         ChangeNotifierProvider<SettingsService>.value(value: settings),
+        ChangeNotifierProvider<UpdateService>.value(value: updateService),
         Provider<CodeAnalyzerService>(
           create: (_) => CodeAnalyzerService(),
         ),

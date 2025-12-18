@@ -402,6 +402,300 @@ class Screen:
             print(f"findText Error: {str(e)}")
             return None
 
+class File:
+    """File operations API"""
+
+    @staticmethod
+    def create(path: str, content: str = "") -> bool:
+        """Create a new file with optional content
+
+        Args:
+            path: File path to create
+            content: Optional initial content
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            import os
+            # Create directory if it doesn't exist
+            directory = os.path.dirname(path)
+            if directory and not os.path.exists(directory):
+                os.makedirs(directory)
+
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            return True
+        except Exception as e:
+            print(f"File.create Error: {str(e)}")
+            return False
+
+    @staticmethod
+    def write(path: str, content: str) -> bool:
+        """Write content to a file (overwrites existing content)
+
+        Args:
+            path: File path to write to
+            content: Content to write
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            import os
+            directory = os.path.dirname(path)
+            if directory and not os.path.exists(directory):
+                os.makedirs(directory)
+
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            return True
+        except Exception as e:
+            print(f"File.write Error: {str(e)}")
+            return False
+
+    @staticmethod
+    def append(path: str, content: str) -> bool:
+        """Append content to a file
+
+        Args:
+            path: File path to append to
+            content: Content to append
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            import os
+            directory = os.path.dirname(path)
+            if directory and not os.path.exists(directory):
+                os.makedirs(directory)
+
+            with open(path, 'a', encoding='utf-8') as f:
+                f.write(content)
+            return True
+        except Exception as e:
+            print(f"File.append Error: {str(e)}")
+            return False
+
+    @staticmethod
+    def read(path: str) -> Optional[str]:
+        """Read entire content of a file
+
+        Args:
+            path: File path to read from
+
+        Returns:
+            File content as string, or None if error
+        """
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception as e:
+            print(f"File.read Error: {str(e)}")
+            return None
+
+    @staticmethod
+    def read_lines(path: str) -> Optional[list]:
+        """Read file content as list of lines
+
+        Args:
+            path: File path to read from
+
+        Returns:
+            List of lines, or None if error
+        """
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return f.readlines()
+        except Exception as e:
+            print(f"File.read_lines Error: {str(e)}")
+            return None
+
+    @staticmethod
+    def delete(path: str) -> bool:
+        """Delete a file
+
+        Args:
+            path: File path to delete
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            import os
+            if os.path.exists(path):
+                os.remove(path)
+                return True
+            return False
+        except Exception as e:
+            print(f"File.delete Error: {str(e)}")
+            return False
+
+    @staticmethod
+    def exists(path: str) -> bool:
+        """Check if a file exists
+
+        Args:
+            path: File path to check
+
+        Returns:
+            True if file exists, False otherwise
+        """
+        try:
+            import os
+            return os.path.isfile(path)
+        except:
+            return False
+
+    @staticmethod
+    def copy(source: str, destination: str) -> bool:
+        """Copy a file
+
+        Args:
+            source: Source file path
+            destination: Destination file path
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            import shutil
+            import os
+            directory = os.path.dirname(destination)
+            if directory and not os.path.exists(directory):
+                os.makedirs(directory)
+            shutil.copy2(source, destination)
+            return True
+        except Exception as e:
+            print(f"File.copy Error: {str(e)}")
+            return False
+
+    @staticmethod
+    def move(source: str, destination: str) -> bool:
+        """Move/rename a file
+
+        Args:
+            source: Source file path
+            destination: Destination file path
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            import shutil
+            import os
+            directory = os.path.dirname(destination)
+            if directory and not os.path.exists(directory):
+                os.makedirs(directory)
+            shutil.move(source, destination)
+            return True
+        except Exception as e:
+            print(f"File.move Error: {str(e)}")
+            return False
+
+    @staticmethod
+    def get_size(path: str) -> Optional[int]:
+        """Get file size in bytes
+
+        Args:
+            path: File path
+
+        Returns:
+            File size in bytes, or None if error
+        """
+        try:
+            import os
+            return os.path.getsize(path)
+        except Exception as e:
+            print(f"File.get_size Error: {str(e)}")
+            return None
+
+    @staticmethod
+    def list_directory(path: str) -> Optional[list]:
+        """List all files and directories in a directory
+
+        Args:
+            path: Directory path
+
+        Returns:
+            List of file/directory names, or None if error
+        """
+        try:
+            import os
+            return os.listdir(path)
+        except Exception as e:
+            print(f"File.list_directory Error: {str(e)}")
+            return None
+
+    @staticmethod
+    def create_directory(path: str) -> bool:
+        """Create a directory (including parent directories)
+
+        Args:
+            path: Directory path to create
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            import os
+            os.makedirs(path, exist_ok=True)
+            return True
+        except Exception as e:
+            print(f"File.create_directory Error: {str(e)}")
+            return False
+
+    @staticmethod
+    def delete_directory(path: str) -> bool:
+        """Delete a directory and all its contents
+
+        Args:
+            path: Directory path to delete
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            import shutil
+            import os
+            if os.path.exists(path):
+                shutil.rmtree(path)
+                return True
+            return False
+        except Exception as e:
+            print(f"File.delete_directory Error: {str(e)}")
+            return False
+
+    @staticmethod
+    def get_absolute_path(path: str) -> str:
+        """Get absolute path from relative path
+
+        Args:
+            path: Relative or absolute path
+
+        Returns:
+            Absolute path
+        """
+        try:
+            import os
+            return os.path.abspath(path)
+        except:
+            return path
+
+    @staticmethod
+    def join_path(*paths) -> str:
+        """Join path components
+
+        Args:
+            *paths: Path components to join
+
+        Returns:
+            Joined path
+        """
+        import os
+        return os.path.join(*paths)
+
 class Utils:
     """Utility functions"""
     

@@ -35,6 +35,8 @@ migrate_working_dir/
 
 # Release artifacts
 /releases/
+/updater.exe
+/updater/updater.exe
 
 # Symbolication related
 app.*.symbols

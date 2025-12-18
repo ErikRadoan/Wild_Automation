@@ -1,0 +1,13 @@
+﻿name: wild_automation_updater
+description: Updater for Wild Automation application
+version: 1.0.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  http: ^1.1.0
+  archive: ^3.4.0
+  path: ^1.8.3
+
