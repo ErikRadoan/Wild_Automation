@@ -255,6 +255,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildLanguageSelector(settings, loc, isDark),
           const SizedBox(height: 32),
 
+          // Update Section
+          _buildSectionHeader('Updates', Icons.system_update),
+          const SizedBox(height: 16),
+          _buildUpdateSection(context, isDark),
+          const SizedBox(height: 32),
+
           // Python Dependencies Section
           _buildSectionHeader('Python Dependencies', Icons.extension),
           const SizedBox(height: 16),
