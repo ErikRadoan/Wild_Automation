@@ -8,8 +8,8 @@ import 'package:path/path.dart' as path;
 class UpdateService extends ChangeNotifier {
   static const String githubOwner = 'ErikRadoan';
   static const String githubRepo = 'Wild_Automation';
-  static const String currentVersion = '1.6.0'; // Update this with each release
-  static const int currentBuildNumber = 14; // Update this with each release
+  static const String currentVersion = '1.6.1'; // Update this with each release
+  static const int currentBuildNumber = 15; // Update this with each release
 
   bool _isChecking = false;
   bool _updateAvailable = false;

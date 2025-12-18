@@ -565,6 +565,98 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
         'Screen',
       ),
 
+      // File Operations
+      ApiItem(
+        'File.create',
+        'File.create(path: str, content="") -> bool',
+        'Create a new file',
+        'File',
+      ),
+      ApiItem(
+        'File.write',
+        'File.write(path: str, content: str) -> bool',
+        'Write to file (overwrites)',
+        'File',
+      ),
+      ApiItem(
+        'File.append',
+        'File.append(path: str, content: str) -> bool',
+        'Append to file',
+        'File',
+      ),
+      ApiItem(
+        'File.read',
+        'File.read(path: str) -> str',
+        'Read entire file',
+        'File',
+      ),
+      ApiItem(
+        'File.read_lines',
+        'File.read_lines(path: str) -> list',
+        'Read file as lines',
+        'File',
+      ),
+      ApiItem(
+        'File.delete',
+        'File.delete(path: str) -> bool',
+        'Delete a file',
+        'File',
+      ),
+      ApiItem(
+        'File.exists',
+        'File.exists(path: str) -> bool',
+        'Check if file exists',
+        'File',
+      ),
+      ApiItem(
+        'File.copy',
+        'File.copy(source: str, destination: str) -> bool',
+        'Copy a file',
+        'File',
+      ),
+      ApiItem(
+        'File.move',
+        'File.move(source: str, destination: str) -> bool',
+        'Move/rename a file',
+        'File',
+      ),
+      ApiItem(
+        'File.get_size',
+        'File.get_size(path: str) -> int',
+        'Get file size in bytes',
+        'File',
+      ),
+      ApiItem(
+        'File.create_directory',
+        'File.create_directory(path: str) -> bool',
+        'Create directory',
+        'File',
+      ),
+      ApiItem(
+        'File.delete_directory',
+        'File.delete_directory(path: str) -> bool',
+        'Delete directory',
+        'File',
+      ),
+      ApiItem(
+        'File.list_directory',
+        'File.list_directory(path: str) -> list',
+        'List directory contents',
+        'File',
+      ),
+      ApiItem(
+        'File.get_absolute_path',
+        'File.get_absolute_path(path: str) -> str',
+        'Get absolute path',
+        'File',
+      ),
+      ApiItem(
+        'File.join_path',
+        'File.join_path(*paths) -> str',
+        'Join path components',
+        'File',
+      ),
+
       // Utils
       ApiItem('wait', 'wait(seconds: float)', 'Pause execution', 'Utility'),
       ApiItem('log', 'log(message: str)', 'Log to console', 'Utility'),
@@ -1124,6 +1216,8 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
         return Icons.keyboard;
       case 'Screen':
         return Icons.screenshot;
+      case 'File':
+        return Icons.insert_drive_file;
       case 'Objects':
         return Icons.crop_free;
       case 'Utility':
@@ -1145,6 +1239,8 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
         return Colors.orange;
       case 'Screen':
         return Colors.green;
+      case 'File':
+        return Colors.indigo;
       case 'Objects':
         return Colors.teal;
       case 'Utility':
