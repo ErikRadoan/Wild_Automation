@@ -230,18 +230,76 @@ class Mouse:
     """Mouse control functions"""
     
     @staticmethod
-    def click(x: int, y: int, button: str = 'left', clicks: int = 1):
-        """Click at coordinates"""
+    def click(x_or_object, y=None, button: str = 'left', clicks: int = 1):
+        """Click at coordinates or screen object
+        
+        Args:
+            x_or_object: Either x coordinate (int) or a screen object tuple (x, y)
+            y: Y coordinate (only used if x_or_object is an int)
+            button: Mouse button ('left', 'right', 'middle')
+            clicks: Number of clicks
+        """
+        # Check if first argument is a tuple/screen object
+        if isinstance(x_or_object, tuple):
+            # It's a screen object (point)
+            if len(x_or_object) >= 2:
+                x, y = x_or_object[0], x_or_object[1]
+            else:
+                raise ValueError("Screen object must have at least 2 coordinates (x, y)")
+        else:
+            # It's separate x, y coordinates
+            x = x_or_object
+            if y is None:
+                raise ValueError("Y coordinate must be provided when using x, y format")
+        
         pyautogui.click(x, y, button=button, clicks=clicks)
     
     @staticmethod
-    def move(x: int, y: int, duration: float = 0.0):
-        """Move mouse to coordinates"""
+    def move(x_or_object, y=None, duration: float = 0.0):
+        """Move mouse to coordinates or screen object
+        
+        Args:
+            x_or_object: Either x coordinate (int) or a screen object tuple (x, y)
+            y: Y coordinate (only used if x_or_object is an int)
+            duration: Time to take for movement in seconds
+        """
+        # Check if first argument is a tuple/screen object
+        if isinstance(x_or_object, tuple):
+            # It's a screen object (point)
+            if len(x_or_object) >= 2:
+                x, y = x_or_object[0], x_or_object[1]
+            else:
+                raise ValueError("Screen object must have at least 2 coordinates (x, y)")
+        else:
+            # It's separate x, y coordinates
+            x = x_or_object
+            if y is None:
+                raise ValueError("Y coordinate must be provided when using x, y format")
+        
         pyautogui.moveTo(x, y, duration=duration)
     
     @staticmethod
-    def drag(x: int, y: int, duration: float = 0.5):
-        """Drag mouse to coordinates"""
+    def drag(x_or_object, y=None, duration: float = 0.5):
+        """Drag mouse to coordinates or screen object
+        
+        Args:
+            x_or_object: Either x coordinate (int) or a screen object tuple (x, y)
+            y: Y coordinate (only used if x_or_object is an int)
+            duration: Time to take for drag in seconds
+        """
+        # Check if first argument is a tuple/screen object
+        if isinstance(x_or_object, tuple):
+            # It's a screen object (point)
+            if len(x_or_object) >= 2:
+                x, y = x_or_object[0], x_or_object[1]
+            else:
+                raise ValueError("Screen object must have at least 2 coordinates (x, y)")
+        else:
+            # It's separate x, y coordinates
+            x = x_or_object
+            if y is None:
+                raise ValueError("Y coordinate must be provided when using x, y format")
+        
         pyautogui.dragTo(x, y, duration=duration)
     
     @staticmethod
