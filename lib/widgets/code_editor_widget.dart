@@ -471,13 +471,13 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
       ApiItem(
         'Window.activate',
         'Window.activate(title: str) -> bool',
-        'Focus a window',
+        'Activate/focus a window',
         'Window',
       ),
       ApiItem(
         'Window.focus',
         'Window.focus(title: str) -> bool',
-        'Focus and wait for window to be interactable',
+        'Focus a window (alias for activate)',
         'Window',
       ),
       ApiItem(

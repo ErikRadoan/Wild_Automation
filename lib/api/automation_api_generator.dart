@@ -92,6 +92,11 @@ class Window:
             return False
     
     @staticmethod
+    def focus(title: str) -> bool:
+        """Focus a window by title (alias for activate)"""
+        return Window.activate(title)
+    
+    @staticmethod
     def maximize(title: str) -> bool:
         """Maximize a window by title"""
         try:
