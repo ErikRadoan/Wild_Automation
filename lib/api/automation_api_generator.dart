@@ -16,6 +16,97 @@ from typing import Tuple, Optional
 # Wild Automation API
 # Auto-generated - DO NOT MODIFY
 
+class InputSync:
+    """Internal class for synchronizing input with window state"""
+    
+    @staticmethod
+    def wait_for_window_ready():
+        """Wait for the active window to be ready to receive input"""
+        try:
+            import win32gui
+            import win32process
+            import ctypes
+            import ctypes.wintypes
+            
+            # Get the foreground window
+            hwnd = win32gui.GetForegroundWindow()
+            if hwnd == 0:
+                time.sleep(0.01)
+                return
+            
+            # Get the thread and process ID of the window
+            thread_id, process_id = win32process.GetWindowThreadProcessId(hwnd)
+            
+            # Use SendMessageTimeout to check if window is responsive
+            # This will wait for the window to process messages
+            SMTO_ABORTIFHUNG = 0x0002
+            WM_NULL = 0x0000
+            timeout = 100  # 100ms timeout
+            
+            SendMessageTimeout = ctypes.windll.user32.SendMessageTimeoutW
+            SendMessageTimeout.argtypes = [
+                ctypes.wintypes.HWND,
+                ctypes.wintypes.UINT,
+                ctypes.wintypes.WPARAM,
+                ctypes.wintypes.LPARAM,
+                ctypes.wintypes.UINT,
+                ctypes.wintypes.UINT,
+                ctypes.POINTER(ctypes.wintypes.DWORD)
+            ]
+            SendMessageTimeout.restype = ctypes.wintypes.LPARAM
+            
+            result = ctypes.wintypes.DWORD()
+            ret = SendMessageTimeout(
+                hwnd,
+                WM_NULL,
+                0,
+                0,
+                SMTO_ABORTIFHUNG,
+                timeout,
+                ctypes.byref(result)
+            )
+            
+            # If the window didn't respond, wait a bit
+            if ret == 0:
+                time.sleep(0.05)
+        except:
+            # Fallback to small delay if there's any error
+            time.sleep(0.01)
+    
+    @staticmethod
+    def safe_delay():
+        """Safe delay after input action to ensure it's processed"""
+        try:
+            import win32gui
+            import win32process
+            import ctypes
+            import ctypes.wintypes
+            
+            # Get the foreground window
+            hwnd = win32gui.GetForegroundWindow()
+            if hwnd == 0:
+                time.sleep(0.01)
+                return
+            
+            # Check if the window's message queue is empty
+            # This indicates the window has processed the input
+            user32 = ctypes.windll.user32
+            QS_ALLINPUT = 0x04FF
+            
+            # Wait for the message queue to be processed (with timeout)
+            max_wait = 0.05  # 50ms max wait
+            start_time = time.time()
+            
+            while time.time() - start_time < max_wait:
+                # Check if there are pending messages
+                if user32.GetQueueStatus(QS_ALLINPUT) == 0:
+                    break
+                time.sleep(0.001)  # 1ms sleep between checks
+            
+        except:
+            # Fallback to minimal delay
+            time.sleep(0.01)
+
 class ScreenObjects:
     """Access to defined screen objects"""
     
@@ -230,7 +321,7 @@ class Mouse:
     """Mouse control functions"""
     
     @staticmethod
-    def click(x_or_object, y=None, button: str = 'left', clicks: int = 1):
+    def click(x_or_object, y=None, button: str = 'left', clicks: int = 1, sync: bool = True):
         """Click at coordinates or screen object
         
         Args:
@@ -238,7 +329,11 @@ class Mouse:
             y: Y coordinate (only used if x_or_object is an int)
             button: Mouse button ('left', 'right', 'middle')
             clicks: Number of clicks
+            sync: Wait for window to be ready before clicking (default True)
         """
+        if sync:
+            InputSync.wait_for_window_ready()
+        
         # Check if first argument is a tuple/screen object
         if isinstance(x_or_object, tuple):
             # It's a screen object (point)
@@ -368,15 +463,20 @@ class Keyboard:
                 time.sleep(interval)
     
     @staticmethod
-    def hotkey(*keys):
+    def hotkey(*keys, sync: bool = True):
         """Press a combination of keys
         
         Args:
             *keys: Keys to press together
+            sync: Wait for window to be ready before pressing (default True)
         """
-        InputSync.wait_for_window_ready()
+        if sync:
+            InputSync.wait_for_window_ready()
+        
         pyautogui.hotkey(*keys)
-        InputSync.safe_delay()
+        
+        if sync:
+            InputSync.safe_delay()
 
 class Screen:
     """Screen capture and recognition functions"""
