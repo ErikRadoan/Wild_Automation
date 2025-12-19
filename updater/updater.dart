@@ -95,19 +95,46 @@ class _UpdaterScreenState extends State<UpdaterScreen> {
 
     final downloadUrl = widget.args[0];
     final currentExePath = widget.args[1];
-    final currentProcessId = widget.args[2];
+    final processIdString = widget.args[2];
+    final currentProcessId = int.tryParse(processIdString);
 
     _log('=== WILD Automation Updater ===');
     _log('Download URL: $downloadUrl');
     _log('Current EXE: $currentExePath');
-    _log('Process ID: $currentProcessId');
+    _log('Process ID: $processIdString');
 
     try {
       // Step 1: Wait for main application to close
       _updateProgress(0.05, 'Waiting for application to close...');
       _log('[1/8] Waiting for main application to close...');
-      await Future.delayed(const Duration(seconds: 3));
-      _log('✓ Application closed');
+
+      if (currentProcessId != null) {
+        // Wait for the process to actually close
+        int attempts = 0;
+        while (attempts < 30) {  // 30 seconds max
+          try {
+            // Check if process still exists
+            final result = await Process.run('tasklist', ['/FI', 'PID eq $currentProcessId', '/NH']);
+            if (!result.stdout.toString().contains(processIdString)) {
+              _log('✓ Main process closed');
+              break;
+            }
+          } catch (e) {
+            // Process not found, it's closed
+            _log('✓ Main process closed');
+            break;
+          }
+          await Future.delayed(const Duration(milliseconds: 500));
+          attempts++;
+        }
+
+        // Extra delay to ensure file handles are released
+        await Future.delayed(const Duration(seconds: 1));
+      } else {
+        // Fallback: just wait a bit
+        await Future.delayed(const Duration(seconds: 3));
+        _log('✓ Waited for application to close');
+      }
 
       // Step 2: Download the new version
       _updateProgress(0.15, 'Downloading update...');
@@ -149,10 +176,12 @@ class _UpdaterScreenState extends State<UpdaterScreen> {
       // Step 7: Launch new version
       _updateProgress(0.90, 'Launching updated application...');
       _log('[7/8] Launching updated application...');
+      final newExePath = currentExePath;
       await Process.start(
-        currentExePath,
+        newExePath,
         [],
         mode: ProcessStartMode.detached,
+        workingDirectory: currentDir,
       );
       _log('✓ Application launched');
 
@@ -162,9 +191,13 @@ class _UpdaterScreenState extends State<UpdaterScreen> {
       try {
         await Directory(tempExtractDir).delete(recursive: true);
         await File(downloadPath).delete();
+        if (await Directory(backupDir).exists()) {
+          // Keep backup for safety
+          _log('Note: Backup kept at: $backupDir');
+        }
         _log('✓ Cleanup complete');
       } catch (e) {
-        _log('Warning: Some temporary files could not be deleted');
+        _log('Warning: Some temporary files could not be deleted: $e');
       }
 
       // Done!
@@ -172,13 +205,43 @@ class _UpdaterScreenState extends State<UpdaterScreen> {
       _log('');
       _log('=== Update Successful! ===');
       _log('The application has been updated and launched.');
-      _log('This window will close in 5 seconds...');
+      _log('This updater will now close...');
 
       setState(() {
         _isComplete = true;
       });
 
-      await Future.delayed(const Duration(seconds: 5));
+      await Future.delayed(const Duration(seconds: 3));
+
+      // Self-delete the old updater and exit
+      final currentUpdaterPath = Platform.resolvedExecutable;
+      final oldUpdaterPath = '$currentUpdaterPath.old';
+
+      try {
+        // Rename current updater so it can be deleted
+        await File(currentUpdaterPath).rename(oldUpdaterPath);
+
+        // Create a batch script to delete the old updater after this process exits
+        final batchScript = path.join(currentDir, 'cleanup_updater.bat');
+        final batchContent = '''
+@echo off
+timeout /t 2 /nobreak > nul
+del /f /q "$oldUpdaterPath" 2>nul
+del /f /q "%~f0" 2>nul
+''';
+        await File(batchScript).writeAsString(batchContent);
+
+        // Execute the batch script
+        await Process.start(
+          'cmd',
+          ['/c', batchScript],
+          mode: ProcessStartMode.detached,
+          runInShell: false,
+        );
+      } catch (e) {
+        _log('Note: Old updater cleanup will happen on next update');
+      }
+
       exit(0);
     } catch (e, stackTrace) {
       _log('');
@@ -262,26 +325,63 @@ class _UpdaterScreenState extends State<UpdaterScreen> {
   Future<void> _replaceFiles(String sourceDir, String targetDir, String currentExePath) async {
     final source = Directory(sourceDir);
     final currentExeName = path.basename(currentExePath);
+    final currentUpdaterExe = Platform.resolvedExecutable;
+    final currentUpdaterName = path.basename(currentUpdaterExe);
 
     // Copy all files from source to target
     await for (final entity in source.list(recursive: false)) {
       final name = path.basename(entity.path);
       final targetPath = path.join(targetDir, name);
 
+      // Skip the currently running updater executable
+      if (name.toLowerCase() == currentUpdaterName.toLowerCase()) {
+        _log('  Skipped (running): $name');
+        continue;
+      }
+
       if (entity is File) {
-        // Delete old file first if it exists
-        if (await File(targetPath).exists()) {
-          await File(targetPath).delete();
+        try {
+          // For the main executable, try a few times in case it's still releasing file handles
+          if (name.toLowerCase() == currentExeName.toLowerCase()) {
+            int attempts = 0;
+            while (attempts < 5) {
+              try {
+                if (await File(targetPath).exists()) {
+                  await File(targetPath).delete();
+                }
+                await entity.copy(targetPath);
+                _log('  Replaced: $name');
+                break;
+              } catch (e) {
+                attempts++;
+                if (attempts >= 5) {
+                  rethrow;
+                }
+                await Future.delayed(const Duration(milliseconds: 500));
+              }
+            }
+          } else {
+            // Regular file
+            if (await File(targetPath).exists()) {
+              await File(targetPath).delete();
+            }
+            await entity.copy(targetPath);
+            _log('  Copied: $name');
+          }
+        } catch (e) {
+          _log('  Warning: Could not replace $name: $e');
         }
-        await entity.copy(targetPath);
-        _log('  Copied: $name');
       } else if (entity is Directory) {
         // For directories, copy recursively
-        if (!await Directory(targetPath).exists()) {
-          await Directory(targetPath).create();
+        try {
+          if (!await Directory(targetPath).exists()) {
+            await Directory(targetPath).create();
+          }
+          await _copyDirectory(entity.path, targetPath);
+          _log('  Copied directory: $name');
+        } catch (e) {
+          _log('  Warning: Could not copy directory $name: $e');
         }
-        await _copyDirectory(entity.path, targetPath);
-        _log('  Copied directory: $name');
       }
     }
   }
