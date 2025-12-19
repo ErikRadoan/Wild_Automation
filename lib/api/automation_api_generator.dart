@@ -253,16 +253,23 @@ class Mouse:
                 raise ValueError("Y coordinate must be provided when using x, y format")
         
         pyautogui.click(x, y, button=button, clicks=clicks)
+        
+        if sync:
+            InputSync.safe_delay()
     
     @staticmethod
-    def move(x_or_object, y=None, duration: float = 0.0):
+    def move(x_or_object, y=None, duration: float = 0.0, sync: bool = False):
         """Move mouse to coordinates or screen object
         
         Args:
             x_or_object: Either x coordinate (int) or a screen object tuple (x, y)
             y: Y coordinate (only used if x_or_object is an int)
             duration: Time to take for movement in seconds
+            sync: Wait for window to be ready before moving (default False)
         """
+        if sync:
+            InputSync.wait_for_window_ready()
+        
         # Check if first argument is a tuple/screen object
         if isinstance(x_or_object, tuple):
             # It's a screen object (point)
@@ -277,16 +284,23 @@ class Mouse:
                 raise ValueError("Y coordinate must be provided when using x, y format")
         
         pyautogui.moveTo(x, y, duration=duration)
+        
+        if sync:
+            InputSync.safe_delay()
     
     @staticmethod
-    def drag(x_or_object, y=None, duration: float = 0.5):
+    def drag(x_or_object, y=None, duration: float = 0.5, sync: bool = True):
         """Drag mouse to coordinates or screen object
         
         Args:
             x_or_object: Either x coordinate (int) or a screen object tuple (x, y)
             y: Y coordinate (only used if x_or_object is an int)
             duration: Time to take for drag in seconds
+            sync: Wait for window to be ready before dragging (default True)
         """
+        if sync:
+            InputSync.wait_for_window_ready()
+        
         # Check if first argument is a tuple/screen object
         if isinstance(x_or_object, tuple):
             # It's a screen object (point)
@@ -301,6 +315,9 @@ class Mouse:
                 raise ValueError("Y coordinate must be provided when using x, y format")
         
         pyautogui.dragTo(x, y, duration=duration)
+        
+        if sync:
+            InputSync.safe_delay()
     
     @staticmethod
     def scroll(clicks: int):
@@ -311,19 +328,55 @@ class Keyboard:
     """Keyboard control functions"""
     
     @staticmethod
-    def write(text: str, interval: float = 0.0):
-        """Type text"""
+    def write(text: str, interval: float = 0.0, sync: bool = True):
+        """Type text
+        
+        Args:
+            text: Text to type
+            interval: Time between keystrokes in seconds
+            sync: Wait for window to be ready before typing (default True)
+        """
+        if sync:
+            InputSync.wait_for_window_ready()
+        
         pyautogui.write(text, interval=interval)
+        
+        if sync:
+            InputSync.safe_delay()
     
     @staticmethod
-    def press(key: str):
-        """Press a key"""
-        pyautogui.press(key)
+    def press(key: str, presses: int = 1, interval: float = 0.0, sync: bool = True):
+        """Press a key one or more times
+        
+        Args:
+            key: Key to press
+            presses: Number of times to press the key (default 1)
+            interval: Time between presses in seconds (default 0.0)
+            sync: Wait for window to process each keypress (default True)
+        """
+        for i in range(presses):
+            if sync:
+                InputSync.wait_for_window_ready()
+            
+            pyautogui.press(key)
+            
+            if sync:
+                InputSync.safe_delay()
+            
+            # Add interval delay between presses if specified
+            if interval > 0 and i < presses - 1:
+                time.sleep(interval)
     
     @staticmethod
     def hotkey(*keys):
-        """Press a combination of keys"""
+        """Press a combination of keys
+        
+        Args:
+            *keys: Keys to press together
+        """
+        InputSync.wait_for_window_ready()
         pyautogui.hotkey(*keys)
+        InputSync.safe_delay()
 
 class Screen:
     """Screen capture and recognition functions"""

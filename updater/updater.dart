@@ -3,223 +3,438 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as path;
+import 'package:window_manager/window_manager.dart';
+import 'package:flutter/material.dart';
 
-/// Wild Automation Updater
-///
-/// This executable handles the update process:
-/// 1. Downloads the new release
-/// 2. Extracts it
-/// 3. Moves user data to the new version
-/// 4. Replaces the old executable
-/// 5. Launches the new version
-/// 6. Cleans up and deletes itself
-
+/// Wild Automation Updater with GUI
 void main(List<String> args) async {
-  print('=== WILD Automation Updater ===\n');
+  WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
 
-  if (args.length < 3) {
-    print('Usage: updater.exe <download_url> <current_exe_path> <current_process_id>');
-    print('\nPress Enter to exit...');
-    stdin.readLineSync();
-    exit(1);
-  }
-
-  final downloadUrl = args[0];
-  final currentExePath = args[1];
-  final currentProcessId = args[2];
-
-  print('Download URL: $downloadUrl');
-  print('Current EXE: $currentExePath');
-  print('Process ID: $currentProcessId\n');
-
-  try {
-    // Step 1: Wait for main application to close
-    print('[1/7] Waiting for main application to close...');
-    await Future.delayed(const Duration(seconds: 2));
-    print('✓ Application closed\n');
-
-    // Step 2: Download the new version
-    print('[2/7] Downloading update...');
-    final downloadPath = await downloadFile(downloadUrl);
-    print('✓ Download complete: $downloadPath\n');
-
-    // Step 3: Extract the archive
-    print('[3/7] Extracting update...');
-    final currentDir = path.dirname(currentExePath);
-    final tempExtractDir = path.join(currentDir, 'update_temp');
-    await extractArchive(downloadPath, tempExtractDir);
-    print('✓ Extraction complete\n');
-
-    // Step 4: Find the new executable
-    print('[4/7] Locating new executable...');
-    final newExePath = await findExecutable(tempExtractDir);
-    if (newExePath == null) {
-      throw Exception('Could not find new executable in extracted files');
-    }
-    print('✓ Found: $newExePath\n');
-
-    // Step 5: Backup and replace
-    print('[5/7] Replacing application files...');
-    final backupPath = '$currentExePath.backup';
-
-    // Backup old executable
-    if (await File(currentExePath).exists()) {
-      await File(currentExePath).copy(backupPath);
-      await File(currentExePath).delete();
-    }
-
-    // Copy new executable
-    await File(newExePath).copy(currentExePath);
-
-    // Copy data directory if it exists in new version
-    final newDataDir = path.join(path.dirname(newExePath), 'data');
-    final currentDataDir = path.join(currentDir, 'data');
-
-    if (await Directory(newDataDir).exists()) {
-      // If data directory exists in update, merge it
-      await copyDirectory(newDataDir, currentDataDir, overwrite: false);
-    }
-
-    print('✓ Files replaced successfully\n');
-
-    // Step 6: Launch new version
-    print('[6/7] Launching updated application...');
-    await Process.start(
-      currentExePath,
-      [],
-      mode: ProcessStartMode.detached,
-    );
-    print('✓ Application launched\n');
-
-    // Step 7: Cleanup
-    print('[7/7] Cleaning up...');
-
-    // Delete temporary extraction directory
-    try {
-      await Directory(tempExtractDir).delete(recursive: true);
-    } catch (e) {
-      print('Warning: Could not delete temp directory: $e');
-    }
-
-    // Delete downloaded archive
-    try {
-      await File(downloadPath).delete();
-    } catch (e) {
-      print('Warning: Could not delete download: $e');
-    }
-
-    // Delete backup after successful launch
-    try {
-      await Future.delayed(const Duration(seconds: 2));
-      if (await File(backupPath).exists()) {
-        await File(backupPath).delete();
-      }
-    } catch (e) {
-      print('Warning: Could not delete backup: $e');
-    }
-
-    print('✓ Cleanup complete\n');
-
-    print('=== Update Successful! ===');
-    print('The application has been updated and launched.');
-    print('This window will close in 3 seconds...');
-
-    await Future.delayed(const Duration(seconds: 3));
-    exit(0);
-  } catch (e, stackTrace) {
-    print('\n❌ ERROR: $e');
-    print('\nStack trace:\n$stackTrace');
-    print('\n\nUpdate failed. Please download and install manually.');
-    print('Press Enter to exit...');
-    stdin.readLineSync();
-    exit(1);
-  }
-}
-
-/// Download file from URL
-Future<String> downloadFile(String url) async {
-  final response = await http.get(Uri.parse(url));
-
-  if (response.statusCode != 200) {
-    throw Exception('Download failed: HTTP ${response.statusCode}');
-  }
-
-  final tempDir = Directory.systemTemp;
-  final downloadPath = path.join(
-    tempDir.path,
-    'wild_automation_update_${DateTime.now().millisecondsSinceEpoch}.zip',
+  const windowOptions = WindowOptions(
+    size: Size(600, 400),
+    center: true,
+    title: 'WILD Automation Updater',
+    titleBarStyle: TitleBarStyle.normal,
+    alwaysOnTop: true,
   );
 
-  final file = File(downloadPath);
-  await file.writeAsBytes(response.bodyBytes);
+  await windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await windowManager.show();
+    await windowManager.focus();
+  });
 
-  return downloadPath;
+  runApp(UpdaterApp(args: args));
 }
 
-/// Extract ZIP archive
-Future<void> extractArchive(String archivePath, String targetDir) async {
-  // Create target directory
-  await Directory(targetDir).create(recursive: true);
+class UpdaterApp extends StatelessWidget {
+  final List<String> args;
 
-  // Read archive
-  final bytes = await File(archivePath).readAsBytes();
-  final archive = ZipDecoder().decodeBytes(bytes);
+  const UpdaterApp({super.key, required this.args});
 
-  // Extract files
-  for (final file in archive) {
-    final filename = path.join(targetDir, file.name);
-
-    if (file.isFile) {
-      final outFile = File(filename);
-      await outFile.create(recursive: true);
-      await outFile.writeAsBytes(file.content as List<int>);
-    } else {
-      await Directory(filename).create(recursive: true);
-    }
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'WILD Automation Updater',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: const Color(0xFF1E1E1E),
+      ),
+      home: UpdaterScreen(args: args),
+    );
   }
 }
 
-/// Find the main executable in extracted files
-Future<String?> findExecutable(String directory) async {
-  final dir = Directory(directory);
+class UpdaterScreen extends StatefulWidget {
+  final List<String> args;
 
-  await for (final entity in dir.list(recursive: true)) {
-    if (entity is File) {
+  const UpdaterScreen({super.key, required this.args});
+
+  @override
+  State<UpdaterScreen> createState() => _UpdaterScreenState();
+}
+
+class _UpdaterScreenState extends State<UpdaterScreen> {
+  final List<String> _logs = [];
+  double _progress = 0.0;
+  String _currentStep = 'Initializing...';
+  bool _isComplete = false;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startUpdate();
+  }
+
+  void _log(String message) {
+    setState(() {
+      _logs.add('${DateTime.now().toString().substring(11, 19)} - $message');
+    });
+  }
+
+  void _updateProgress(double progress, String step) {
+    setState(() {
+      _progress = progress;
+      _currentStep = step;
+    });
+  }
+
+  Future<void> _startUpdate() async {
+    if (widget.args.length < 3) {
+      _log('ERROR: Invalid arguments');
+      _log('Usage: updater.exe <download_url> <current_exe_path> <process_id>');
+      setState(() {
+        _hasError = true;
+        _currentStep = 'Error: Invalid arguments';
+      });
+      return;
+    }
+
+    final downloadUrl = widget.args[0];
+    final currentExePath = widget.args[1];
+    final currentProcessId = widget.args[2];
+
+    _log('=== WILD Automation Updater ===');
+    _log('Download URL: $downloadUrl');
+    _log('Current EXE: $currentExePath');
+    _log('Process ID: $currentProcessId');
+
+    try {
+      // Step 1: Wait for main application to close
+      _updateProgress(0.05, 'Waiting for application to close...');
+      _log('[1/8] Waiting for main application to close...');
+      await Future.delayed(const Duration(seconds: 3));
+      _log('✓ Application closed');
+
+      // Step 2: Download the new version
+      _updateProgress(0.15, 'Downloading update...');
+      _log('[2/8] Downloading update from GitHub...');
+      final downloadPath = await _downloadFile(downloadUrl);
+      _log('✓ Download complete: $downloadPath');
+
+      // Step 3: Extract the archive
+      _updateProgress(0.40, 'Extracting update...');
+      _log('[3/8] Extracting update archive...');
+      final currentDir = path.dirname(currentExePath);
+      final tempExtractDir = path.join(currentDir, 'update_temp');
+      await _extractArchive(downloadPath, tempExtractDir);
+      _log('✓ Extraction complete');
+
+      // Step 4: Find the release folder (might be nested in ZIP)
+      _updateProgress(0.50, 'Locating files...');
+      _log('[4/8] Locating release files...');
+      final releaseDir = await _findReleaseDirectory(tempExtractDir);
+      if (releaseDir == null) {
+        throw Exception('Could not find release files in extracted archive');
+      }
+      _log('✓ Found release directory: $releaseDir');
+
+      // Step 5: Backup current installation
+      _updateProgress(0.60, 'Creating backup...');
+      _log('[5/8] Creating backup of current installation...');
+      final backupDir = path.join(currentDir, 'backup_${DateTime.now().millisecondsSinceEpoch}');
+      await Directory(backupDir).create();
+      await File(currentExePath).copy(path.join(backupDir, path.basename(currentExePath)));
+      _log('✓ Backup created: $backupDir');
+
+      // Step 6: Replace files
+      _updateProgress(0.70, 'Replacing application files...');
+      _log('[6/8] Replacing application files...');
+      await _replaceFiles(releaseDir, currentDir, currentExePath);
+      _log('✓ Files replaced successfully');
+
+      // Step 7: Launch new version
+      _updateProgress(0.90, 'Launching updated application...');
+      _log('[7/8] Launching updated application...');
+      await Process.start(
+        currentExePath,
+        [],
+        mode: ProcessStartMode.detached,
+      );
+      _log('✓ Application launched');
+
+      // Step 8: Cleanup
+      _updateProgress(0.95, 'Cleaning up...');
+      _log('[8/8] Cleaning up temporary files...');
+      try {
+        await Directory(tempExtractDir).delete(recursive: true);
+        await File(downloadPath).delete();
+        _log('✓ Cleanup complete');
+      } catch (e) {
+        _log('Warning: Some temporary files could not be deleted');
+      }
+
+      // Done!
+      _updateProgress(1.0, 'Update complete!');
+      _log('');
+      _log('=== Update Successful! ===');
+      _log('The application has been updated and launched.');
+      _log('This window will close in 5 seconds...');
+
+      setState(() {
+        _isComplete = true;
+      });
+
+      await Future.delayed(const Duration(seconds: 5));
+      exit(0);
+    } catch (e, stackTrace) {
+      _log('');
+      _log('❌ ERROR: $e');
+      _log('Stack trace: ${stackTrace.toString().split('\n').take(5).join('\n')}');
+      _log('');
+      _log('Update failed. Please download and install manually from GitHub.');
+
+      setState(() {
+        _hasError = true;
+        _currentStep = 'Update failed';
+      });
+    }
+  }
+
+  Future<String> _downloadFile(String url) async {
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode != 200) {
+      throw Exception('Download failed: HTTP ${response.statusCode}');
+    }
+
+    final tempDir = Directory.systemTemp;
+    final downloadPath = path.join(
+      tempDir.path,
+      'wild_automation_update_${DateTime.now().millisecondsSinceEpoch}.zip',
+    );
+
+    final file = File(downloadPath);
+    await file.writeAsBytes(response.bodyBytes);
+
+    return downloadPath;
+  }
+
+  Future<void> _extractArchive(String archivePath, String targetDir) async {
+    await Directory(targetDir).create(recursive: true);
+
+    final bytes = await File(archivePath).readAsBytes();
+    final archive = ZipDecoder().decodeBytes(bytes);
+
+    for (final file in archive) {
+      final filename = path.join(targetDir, file.name);
+
+      if (file.isFile) {
+        final outFile = File(filename);
+        await outFile.create(recursive: true);
+        await outFile.writeAsBytes(file.content as List<int>);
+      } else {
+        await Directory(filename).create(recursive: true);
+      }
+    }
+  }
+
+  /// Find the directory containing the actual release files
+  /// GitHub releases might have a parent folder in the ZIP
+  Future<String?> _findReleaseDirectory(String extractDir) async {
+    final dir = Directory(extractDir);
+
+    // First check if executable is directly in extract dir
+    await for (final entity in dir.list(recursive: false)) {
+      if (entity is File && entity.path.toLowerCase().endsWith('.exe')) {
+        return extractDir;
+      }
+    }
+
+    // Check one level deep for a subdirectory with the executable
+    await for (final entity in dir.list(recursive: false)) {
+      if (entity is Directory) {
+        final subDir = Directory(entity.path);
+        await for (final subEntity in subDir.list(recursive: false)) {
+          if (subEntity is File && subEntity.path.toLowerCase().endsWith('.exe')) {
+            return entity.path;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _replaceFiles(String sourceDir, String targetDir, String currentExePath) async {
+    final source = Directory(sourceDir);
+    final currentExeName = path.basename(currentExePath);
+
+    // Copy all files from source to target
+    await for (final entity in source.list(recursive: false)) {
       final name = path.basename(entity.path);
-      if (name.toLowerCase() == 'wild_automation.exe' ||
-          name.toLowerCase() == 'wild automate.exe') {
-        return entity.path;
+      final targetPath = path.join(targetDir, name);
+
+      if (entity is File) {
+        // Delete old file first if it exists
+        if (await File(targetPath).exists()) {
+          await File(targetPath).delete();
+        }
+        await entity.copy(targetPath);
+        _log('  Copied: $name');
+      } else if (entity is Directory) {
+        // For directories, copy recursively
+        if (!await Directory(targetPath).exists()) {
+          await Directory(targetPath).create();
+        }
+        await _copyDirectory(entity.path, targetPath);
+        _log('  Copied directory: $name');
       }
     }
   }
 
-  return null;
-}
+  Future<void> _copyDirectory(String source, String destination) async {
+    final sourceDir = Directory(source);
+    final destDir = Directory(destination);
 
-/// Copy directory contents
-Future<void> copyDirectory(
-  String source,
-  String destination, {
-  bool overwrite = true,
-}) async {
-  final sourceDir = Directory(source);
-  final destDir = Directory(destination);
+    if (!await destDir.exists()) {
+      await destDir.create(recursive: true);
+    }
 
-  if (!await destDir.exists()) {
-    await destDir.create(recursive: true);
-  }
+    await for (final entity in sourceDir.list(recursive: false)) {
+      final name = path.basename(entity.path);
+      final destPath = path.join(destination, name);
 
-  await for (final entity in sourceDir.list(recursive: false)) {
-    final name = path.basename(entity.path);
-    final destPath = path.join(destination, name);
-
-    if (entity is File) {
-      if (overwrite || !await File(destPath).exists()) {
+      if (entity is File) {
         await entity.copy(destPath);
+      } else if (entity is Directory) {
+        await _copyDirectory(entity.path, destPath);
       }
-    } else if (entity is Directory) {
-      await copyDirectory(entity.path, destPath, overwrite: overwrite);
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title
+            Row(
+              children: [
+                const Icon(Icons.system_update, size: 32, color: Colors.blue),
+                const SizedBox(width: 12),
+                const Text(
+                  'WILD Automation Updater',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Progress bar
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _currentStep,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: _hasError ? Colors.red : (_isComplete ? Colors.green : Colors.white),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                LinearProgressIndicator(
+                  value: _progress,
+                  backgroundColor: Colors.grey[800],
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _hasError ? Colors.red : (_isComplete ? Colors.green : Colors.blue),
+                  ),
+                  minHeight: 8,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${(_progress * 100).toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[400],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Log section
+            const Text(
+              'Update Log:',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[700]!),
+                ),
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _logs.length,
+                  itemBuilder: (context, index) {
+                    final log = _logs[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        log,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'Courier New',
+                          color: log.contains('ERROR') || log.contains('❌')
+                              ? Colors.red
+                              : log.contains('✓')
+                                  ? Colors.green
+                                  : log.contains('Warning')
+                                      ? Colors.orange
+                                      : Colors.grey[300],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            // Bottom buttons
+            if (_hasError || _isComplete) ...[
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (_hasError)
+                    ElevatedButton(
+                      onPressed: () => exit(1),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      child: const Text('Close'),
+                    ),
+                  if (_isComplete)
+                    ElevatedButton(
+                      onPressed: () => exit(0),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                      child: const Text('Close'),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 

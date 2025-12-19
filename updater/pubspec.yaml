@@ -1,5 +1,5 @@
 ﻿name: wild_automation_updater
-description: Updater for Wild Automation application
+description: Updater for Wild Automation application with GUI
 version: 1.0.0
 publish_to: 'none'
 
@@ -7,7 +7,10 @@ environment:
   sdk: ^3.9.2
 
 dependencies:
+  flutter:
+    sdk: flutter
   http: ^1.1.0
   archive: ^3.4.0
   path: ^1.8.3
+  window_manager: ^0.3.7
 

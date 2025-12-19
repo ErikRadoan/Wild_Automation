@@ -497,7 +497,7 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
       ApiItem(
         'Mouse.click',
         'Mouse.click(x: int, y: int, button="left") OR Mouse.click(object)',
-        'Click at coordinates or object',
+        'Click at coordinates or object (auto-synced)',
         'Mouse',
       ),
       ApiItem(
@@ -509,7 +509,7 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
       ApiItem(
         'Mouse.drag',
         'Mouse.drag(x: int, y: int, duration=0.5) OR Mouse.drag(object)',
-        'Drag mouse to coordinates or object',
+        'Drag mouse to coordinates or object (auto-synced)',
         'Mouse',
       ),
       ApiItem(
@@ -523,19 +523,19 @@ class _CodeEditorWidgetState extends State<CodeEditorWidget> {
       ApiItem(
         'Keyboard.write',
         'Keyboard.write(text: str, interval=0.0)',
-        'Type text',
+        'Type text (auto-synced)',
         'Keyboard',
       ),
       ApiItem(
         'Keyboard.press',
-        'Keyboard.press(key: str)',
-        'Press a key',
+        'Keyboard.press(key: str, presses=1, interval=0.0)',
+        'Press a key (auto-synced)',
         'Keyboard',
       ),
       ApiItem(
         'Keyboard.hotkey',
         'Keyboard.hotkey(*keys)',
-        'Press key combo',
+        'Press key combo (auto-synced)',
         'Keyboard',
       ),
 
